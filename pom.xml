@@ -62,6 +62,11 @@
 		</dependency>
 		<dependency>
 			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j-open-ai-spring-boot-starter</artifactId>
+			<version>1.14.1-beta24</version>
+		</dependency>
+		<dependency>
+			<groupId>dev.langchain4j</groupId>
 			<artifactId>langchain4j-document-parser-apache-tika</artifactId>
 		</dependency>
 	</dependencies>
