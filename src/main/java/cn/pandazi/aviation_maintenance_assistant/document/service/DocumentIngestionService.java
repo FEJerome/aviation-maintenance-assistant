@@ -6,44 +6,24 @@ import dev.langchain4j.data.document.parser.apache.tika.ApacheTikaDocumentParser
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.embedding.onnx.allminilml6v2.AllMiniLmL6V2EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
-import dev.langchain4j.store.embedding.chroma.ChromaEmbeddingStore;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
-import java.time.Duration;
 
 import static dev.langchain4j.data.document.loader.FileSystemDocumentLoader.loadDocument;
 
 @Service
 public class DocumentIngestionService {
 
-    private final String chromaBaseUrl;
-    private final String collectionName;
-    private EmbeddingStore<TextSegment> embeddingStore;
+    private final EmbeddingStore<TextSegment> embeddingStore;
     private final EmbeddingModel embeddingModel;
 
-    public DocumentIngestionService(
-            @Value("${langchain4j.chroma.embedding-store.base-url}") String chromaBaseUrl,
-            @Value("${langchain4j.chroma.embedding-store.collection-name}") String collectionName) {
-
-        this.chromaBaseUrl = chromaBaseUrl;
-        this.collectionName = collectionName;
-        this.embeddingModel = new AllMiniLmL6V2EmbeddingModel();
-    }
-
-    private synchronized EmbeddingStore<TextSegment> getEmbeddingStore() {
-        if (this.embeddingStore == null) {
-            this.embeddingStore = ChromaEmbeddingStore.builder()
-                    .baseUrl(chromaBaseUrl)
-                    .collectionName(collectionName)
-                    .timeout(Duration.ofSeconds(15))
-                    .build();
-        }
-        return this.embeddingStore;
+    public DocumentIngestionService(@Lazy EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel) {
+        this.embeddingStore = embeddingStore;
+        this.embeddingModel = embeddingModel;
     }
 
     public void ingestDocument(Path filePath) {
@@ -57,7 +37,7 @@ public class DocumentIngestionService {
         EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
                 .documentSplitter(splitter)
                 .embeddingModel(embeddingModel)
-                .embeddingStore(getEmbeddingStore())
+                .embeddingStore(embeddingStore)
                 .build();
 
         // 4. 执行嵌入与存储

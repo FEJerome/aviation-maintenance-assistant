@@ -5,6 +5,12 @@ spring:
   application:
     name: aviation-maintenance-assistant
 
+app:
+  rag:
+    retrieval:
+      max-results: 5
+      min-score: 0.6
+
 langchain4j:
   open-ai:
     chat-model:
