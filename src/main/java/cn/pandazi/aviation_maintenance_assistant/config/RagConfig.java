@@ -1,8 +1,12 @@
 package cn.pandazi.aviation_maintenance_assistant.config;
 
+import cn.pandazi.aviation_maintenance_assistant.rag.TranslationQueryTransformer;
 import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.embedding.onnx.allminilml6v2.AllMiniLmL6V2EmbeddingModel;
+import dev.langchain4j.rag.DefaultRetrievalAugmentor;
+import dev.langchain4j.rag.RetrievalAugmentor;
 import dev.langchain4j.rag.content.retriever.ContentRetriever;
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
 import dev.langchain4j.store.embedding.EmbeddingStore;
@@ -46,6 +50,18 @@ public class RagConfig {
                 .embeddingModel(embeddingModel)
                 .maxResults(maxResults)
                 .minScore(minScore)
+                .build();
+    }
+
+    @Lazy
+    @Bean
+    public RetrievalAugmentor retrievalAugmentor(
+            ChatModel chatModel,
+            @Lazy ContentRetriever contentRetriever,
+            @Value("${app.rag.query-translation.enabled:true}") boolean translationEnabled) {
+        return DefaultRetrievalAugmentor.builder()
+                .queryTransformer(new TranslationQueryTransformer(chatModel, translationEnabled))
+                .contentRetriever(contentRetriever)
                 .build();
     }
 }
