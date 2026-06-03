@@ -48,6 +48,8 @@ public class AircraftValidationService {
 
     private String normalize(String input) {
         String normalized = input.toUpperCase().replaceAll("[\\s-]", "");
+        // 去掉厂商前缀：Flight Design CTLS → CTLS，Aerospool WT9 → WT9
+        normalized = normalized.replaceAll("^(FLIGHTDESIGN|AEROSPOOL)", "");
         // Rotax 912 子型号归一化：912ULS / 912S / 912iS → 912
         normalized = normalized.replaceAll("912(ULS|S|IS)$", "912");
         return normalized;

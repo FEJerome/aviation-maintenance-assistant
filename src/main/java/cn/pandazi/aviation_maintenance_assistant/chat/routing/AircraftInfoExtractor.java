@@ -11,12 +11,12 @@ import java.util.regex.Pattern;
 public class AircraftInfoExtractor {
 
     private static final Pattern MODEL_PATTERN = Pattern.compile(
-            "\\b((?:CTLS|WT9|FLIGHTDESIGN|AEROSPOOL)?[\\s-]*(?:[AB]\\d{3}(?:-\\d{3,4})?(?:[A-Z]{2})?|CTLS|WT9))\\b",
+            "\\b((?:CTLS|WT9|FLIGHTDESIGN|AEROSPOOL)?[\\s-]*(?:[AB]\\d{3}(?:-\\d{3,4})?(?:[A-Z]{2,3})?|CTLS|WT9))\\b",
             Pattern.CASE_INSENSITIVE
     );
 
     private static final Pattern ENGINE_PATTERN = Pattern.compile(
-            "\\b((?:CFM56(?:-[A-Z0-9]+)?|CFM\\s*LEAP-1[AB]|LEAP-1[AB]|PW1100G|V2500|GE90(?:-[A-Z0-9]+)?|ROTAX\\s*912(?:\\s*(?:ULS|S|iS))?))\\b",
+            "\\b((?:CFM56(?:-[A-Z0-9]+)?|LEAP-1[AB]|PW\\s*1100G|V2500|GE\\s*90(?:-[A-Z0-9]+)?|ROTAX\\s*912(?:\\s*(?:ULS|S|iS))?))\\b",
             Pattern.CASE_INSENSITIVE
     );
 
