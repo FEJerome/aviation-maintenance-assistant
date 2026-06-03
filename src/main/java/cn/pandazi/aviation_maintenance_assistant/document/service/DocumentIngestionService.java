@@ -43,4 +43,17 @@ public class DocumentIngestionService {
         // 4. 执行嵌入与存储
         ingestor.ingest(document);
     }
+
+    /**
+     * 摄入文档，捕获异常不中断流程
+     */
+    public boolean ingestDocumentSafe(Path filePath) {
+        try {
+            ingestDocument(filePath);
+            return true;
+        } catch (Exception e) {
+            System.err.println("Failed to ingest: " + filePath.getFileName() + " - " + e.getMessage());
+            return false;
+        }
+    }
 }
