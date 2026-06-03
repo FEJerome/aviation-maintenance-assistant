@@ -47,6 +47,9 @@ public class AircraftValidationService {
     }
 
     private String normalize(String input) {
-        return input.toUpperCase().replaceAll("[\\s-]", "");
+        String normalized = input.toUpperCase().replaceAll("[\\s-]", "");
+        // Rotax 912 子型号归一化：912ULS / 912S / 912iS → 912
+        normalized = normalized.replaceAll("912(ULS|S|IS)$", "912");
+        return normalized;
     }
 }
