@@ -34,3 +34,6 @@ build/
 
 ### ChromaDB ###
 chroma-data/
+
+### Data files ###
+data/
