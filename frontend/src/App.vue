@@ -2,9 +2,14 @@
   <div class="chat-container">
     <div class="chat-header">
       <h2>机务维修知识助手</h2>
-      <span v-if="conversationId" class="conversation-id">
-        会话: {{ conversationId.substring(0, 8) }}...
-      </span>
+      <div class="header-actions">
+        <span v-if="conversationId" class="conversation-id">
+          会话: {{ conversationId.substring(0, 8) }}...
+        </span>
+        <button v-if="conversationId" class="new-chat-btn" @click="startNewChat">
+          新会话
+        </button>
+      </div>
     </div>
 
     <div class="chat-messages" ref="messagesContainer">
@@ -12,8 +17,8 @@
         请输入问题，例如：B737-800 发动机滑油压力
       </div>
       <ChatMessage
-        v-for="(msg, index) in messages"
-        :key="index"
+        v-for="msg in messages"
+        :key="msg.id"
         :role="msg.role"
         :content="msg.content"
       />
@@ -24,6 +29,7 @@
 
     <div class="chat-input-area">
       <input
+        ref="inputRef"
         v-model="inputText"
         type="text"
         placeholder="输入问题..."
@@ -46,13 +52,13 @@ const inputText = ref('')
 const conversationId = ref(null)
 const loading = ref(false)
 const messagesContainer = ref(null)
+const inputRef = ref(null)
 
 async function sendMessage() {
   const text = inputText.value.trim()
   if (!text || loading.value) return
 
-  // 添加用户消息
-  messages.value.push({ role: 'user', content: text })
+  messages.value.push({ id: Date.now(), role: 'user', content: text })
   inputText.value = ''
   loading.value = true
   scrollToBottom()
@@ -68,30 +74,39 @@ async function sendMessage() {
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+      const errData = await response.json().catch(() => ({}))
+      throw new Error(errData.error || errData.message || `HTTP ${response.status}`)
     }
 
     const data = await response.json()
 
-    // 保存会话ID（首次请求后后端返回）
     if (data.conversationId) {
       conversationId.value = data.conversationId
     }
 
-    // 添加系统回复
     messages.value.push({
+      id: Date.now(),
       role: 'system',
       content: data.reply || '暂无回复'
     })
   } catch (error) {
     messages.value.push({
+      id: Date.now(),
       role: 'system',
       content: '请求失败：' + error.message
     })
   } finally {
     loading.value = false
     scrollToBottom()
+    inputRef.value?.focus()
   }
+}
+
+function startNewChat() {
+  conversationId.value = null
+  messages.value = []
+  inputText.value = ''
+  inputRef.value?.focus()
 }
 
 function scrollToBottom() {
@@ -102,19 +117,6 @@ function scrollToBottom() {
   })
 }
 </script>
-
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #f5f5f5;
-}
-</style>
 
 <style scoped>
 .chat-container {
@@ -140,9 +142,30 @@ body {
   color: #333;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .conversation-id {
   font-size: 11px;
   color: #999;
+}
+
+.new-chat-btn {
+  padding: 4px 12px;
+  background-color: transparent;
+  border: 1px solid #007bff;
+  color: #007bff;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.new-chat-btn:hover {
+  background-color: #007bff;
+  color: white;
 }
 
 .chat-messages {
@@ -203,5 +226,25 @@ body {
 .chat-input-area button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .chat-container {
+    max-width: 100%;
+    height: 100dvh;
+  }
+
+  .chat-header h2 {
+    font-size: 16px;
+  }
+
+  .chat-input-area {
+    padding: 8px 12px;
+  }
+
+  .chat-input-area button {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
 }
 </style>
