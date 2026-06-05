@@ -11,3 +11,6 @@ target/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+
+# 测试截图（报告正文保留，图片不入库）
+docs/test-reports/*.png
