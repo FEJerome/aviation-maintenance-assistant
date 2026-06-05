@@ -2,6 +2,9 @@
 .DS_Store
 *.log
 
+# 兜底：防止在根目录误执行 Maven 时产生 target/
+target/
+
 # 后端（通过 backend/.gitignore 处理）
 
 # 前端
