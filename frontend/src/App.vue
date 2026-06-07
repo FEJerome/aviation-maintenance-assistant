@@ -23,7 +23,7 @@
         :content="msg.content"
       />
       <div v-if="loading" class="loading-indicator">
-        <span>思考中...</span>
+        <span>正在生成...</span>
       </div>
     </div>
 
@@ -63,8 +63,12 @@ async function sendMessage() {
   loading.value = true
   scrollToBottom()
 
+  // 预占一个系统消息位，用于流式填充
+  const systemMsgId = Date.now() + 1
+  messages.value.push({ id: systemMsgId, role: 'system', content: '' })
+
   try {
-    const response = await fetch('/api/chat', {
+    const response = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -78,23 +82,63 @@ async function sendMessage() {
       throw new Error(errData.error || errData.message || `HTTP ${response.status}`)
     }
 
-    const data = await response.json()
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
 
-    if (data.conversationId) {
-      conversationId.value = data.conversationId
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+
+      // SSE 格式解析：按双换行分割事件
+      const lines = buffer.split('\n')
+      let eventName = ''
+      let eventData = ''
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]
+        if (line.startsWith('event:')) {
+          eventName = line.substring(6).trim()
+        } else if (line.startsWith('data:')) {
+          eventData = line.substring(5).trim()
+        } else if (line === '' && eventName) {
+          // 一个完整事件
+          if (eventName === 'token') {
+            const msg = messages.value.find(m => m.id === systemMsgId)
+            if (msg) msg.content += eventData
+            scrollToBottom()
+          } else if (eventName === 'complete') {
+            try {
+              const payload = JSON.parse(eventData)
+              if (payload.conversationId) {
+                conversationId.value = payload.conversationId
+              }
+            } catch (e) {
+              // ignore parse error
+            }
+          } else if (eventName === 'error') {
+            const msg = messages.value.find(m => m.id === systemMsgId)
+            if (msg) msg.content = '请求失败：' + eventData
+          }
+          // 重置
+          eventName = ''
+          eventData = ''
+        }
+      }
     }
-
-    messages.value.push({
-      id: Date.now(),
-      role: 'system',
-      content: data.reply || '暂无回复'
-    })
   } catch (error) {
-    messages.value.push({
-      id: Date.now(),
-      role: 'system',
-      content: '请求失败：' + error.message
-    })
+    const msg = messages.value.find(m => m.id === systemMsgId)
+    if (msg) {
+      msg.content = '请求失败：' + error.message
+    } else {
+      messages.value.push({
+        id: Date.now(),
+        role: 'system',
+        content: '请求失败：' + error.message
+      })
+    }
   } finally {
     loading.value = false
     scrollToBottom()

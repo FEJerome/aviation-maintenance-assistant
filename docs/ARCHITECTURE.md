@@ -21,8 +21,9 @@
 |------|------|------|---------|
 | **运行时** | Eclipse Temurin JDK | 21 LTS | 虚拟线程支持，零商业许可风险 |
 | **后端框架** | Spring Boot | 3.5.14 | 成熟稳定，LangChain4j 兼容性验证通过 |
-| **AI 框架** | LangChain4j | 1.14.1 | Java 生态最成熟的 LLM 应用框架（详见 [ADR-001](ADR/ADR-001-langchain4j-over-spring-ai.md)） |
-| **LLM** | DeepSeek | deepseek-chat | 英文能力强、成本低、国内稳定（详见 [ADR-003](ADR/ADR-003-deepseek-over-dashscope.md)） |
+| **AI 框架** | LangChain4j | 1.14.1 | Java 生态最成熟的 LLM 应用框架，原生支持 `TokenStream` 流式抽象（详见 [ADR-001](ADR/ADR-001-langchain4j-over-spring-ai.md)） |
+| **LLM** | DeepSeek | deepseek-chat | 英文能力强、成本低、国内稳定，支持 OpenAI 兼容的 `stream: true` 协议（详见 [ADR-003](ADR/ADR-003-deepseek-over-dashscope.md)） |
+| **流式传输** | Spring SseEmitter | Spring Boot 内置 | 标准 SSE 协议，浏览器原生 `EventSource` 支持（详见 [ADR-004](ADR/ADR-004-streaming-output-over-blocking.md)） |
 | **向量数据库** | ChromaDB | 0.5.5（Docker） | 轻量持久化，本地与云环境零差异（详见 [ADR-002](ADR/ADR-002-chromadb-over-others.md)） |
 | **嵌入模型** | all-MiniLM-L6-v2 | 本地 ONNX | 20MB 轻量，纯 Java 推理，零外部依赖 |
 | **PDF 解析** | Apache Tika | 随 LangChain4j | 支持多种文档格式，与 LangChain4j 文档解析器集成 |
@@ -110,7 +111,7 @@ flowchart TB
     end
 
     subgraph API层
-        Controller["ChatController\nPOST /chat"]
+        Controller["ChatController\nPOST /chat\nPOST /chat/stream (SSE)"]
         IngestController["DocumentIngestionController\nPOST /admin/ingest"]
     end
 
@@ -123,7 +124,7 @@ flowchart TB
     end
 
     subgraph AI层
-        Assistant["Assistant (@AiService)\nSystemMessage + UserMessage"]
+        Assistant["Assistant (@AiService)\nString / TokenStream\nSystemMessage + UserMessage"]
         Augmentor["RetrievalAugmentor\n查询翻译 + 内容检索"]
         Transformer["TranslationQueryTransformer"]
         Retriever["EmbeddingStoreContentRetriever\nTop-5 / min-score 0.6"]
@@ -168,12 +169,12 @@ flowchart TB
 | 模块 | 关键类 | 职责 | 设计原则 |
 |------|--------|------|---------|
 | **Config** | `OpenAiConfig`, `RagConfig` | 声明 LLM、EmbeddingModel、EmbeddingStore、ContentRetriever、RetrievalAugmentor 等 Bean | Spring IoC 统一装配，RAG 组件通过 `@Lazy` 延迟初始化 |
-| **Chat API** | `ChatController` | REST 入口，接收 `ChatRequest`，返回 `ChatResponse` | 薄控制器，无业务逻辑 |
+| **Chat API** | `ChatController` | REST 入口：非流式 `POST /chat` 返回 `ChatResponse`；流式 `POST /chat/stream` 返回 `SseEmitter` | 薄控制器，无业务逻辑，协议转换层 |
 | **Chat DTO** | `ChatRequest`, `ChatResponse` | 请求/响应数据契约 | Java `record`，不可变 |
 | **Routing** | `TopicClassifier` | 确定性关键词匹配（发动机/滑油/飞控等），判断是否需要机型信息 | **不走 LLM**，封闭域覆盖率 100% |
 | **Routing** | `AircraftInfoExtractor` | 从用户 query 中正则提取机型和发动机型号，支持厂商前缀剥离、子型号识别 | 纯文本处理，零外部调用 |
-| **Chat Service** | `MaintenanceChatService` | 核心 orchestrator：查会话 → 路由分类 → 提取验证 → RAG/阻断 | 所有控制流决策均为确定性代码 |
-| **Chat Service** | `Assistant` | LangChain4j `@AiService` 声明式接口，自动拼接 SystemMessage + 检索片段 + UserMessage | 框架自动生成实现类，开发者只写接口 |
+| **Chat Service** | `MaintenanceChatService` | 核心 orchestrator：查会话 → 路由分类 → 提取验证 → RAG/阻断。流式场景下注册 `TokenStream` 回调，将 token 推入 `SseEmitter` | 所有控制流决策均为确定性代码，不感知流式/非流式的实现差异 |
+| **Chat Service** | `Assistant` | LangChain4j `@AiService` 声明式接口。非流式返回 `String`；流式返回 `TokenStream`。自动拼接 SystemMessage + 检索片段 + UserMessage | 框架自动生成实现类，开发者只写接口。返回类型决定内部调用 `ChatLanguageModel` 还是 `StreamingChatLanguageModel` |
 | **Session** | `ChatSessionStore` | 基于 `ConcurrentHashMap` 的内存 LRU 会话存储 | 演示版零部署依赖，生产版可替换为 Redis |
 | **Session** | `SessionContext` | 会话状态：confirmedModel、confirmedEngine、validated | 验证通过后锁定机型上下文 |
 | **Document** | `DocumentIngestionController` | 触发 PDF 批量摄入 | 管理接口，演示版无鉴权 |
@@ -288,6 +289,53 @@ String contextualMessage = "[当前机型：CTLS，发动机：Rotax 912] CTLS�
 
 ---
 
+## 流式请求生命周期详解
+
+以用户输入 **"CTLS的Rotax 912发动机滑油压力标准"** 为例，走通 **流式** 链路（`POST /chat/stream`）：
+
+### ①~⑨ 与非流式完全一致
+
+会话初始化 → 路由分类 → 信息提取 → 机型验证 → 会话保存 → 机型上下文注入 → RAG 检索，所有步骤与非流式模式完全相同。
+
+### ⑩ LLM 流式生成（Assistant / TokenStream / DeepSeek）
+
+- `Assistant.chat()` 返回类型为 `TokenStream`（而非 `String`）
+- LangChain4j `AiServices` 代理自动识别返回类型，内部调用 `StreamingChatLanguageModel`
+- HTTP 请求体增加 `stream: true`，DeepSeek 返回 `text/event-stream`
+- `MaintenanceChatService` 注册回调：
+  ```java
+  tokenStream
+      .onNext(token -> emitter.send(SseEmitter.event().name("token").data(token)))
+      .onComplete(response -> emitter.send(SseEmitter.event().name("complete").data(json)))
+      .onError(error -> emitter.send(SseEmitter.event().name("error").data(errorMessage)))
+      .start();
+  ```
+
+### ⑪ SSE 逐字推送
+
+```
+event: token
+data: 根据
+
+event: token
+data: 您
+
+event: token
+data: 提供
+...
+
+event: complete
+data: {"conversationId":"a1b2c3d4-e5f6-7890-abcd-ef1234567890"}
+```
+
+### ⑫ 前端逐字渲染
+
+- 前端通过 `EventSource` 接收 `token` 事件，每收到一个 token 立即追加到当前消息末尾
+- 用户感知到"打字机效果"，首字延迟从秒级降至毫秒级
+- 收到 `complete` 事件后保存 `conversationId`，关闭连接
+
+---
+
 ## 技术约束与边界
 
 ### 当前实现的已知限制（演示版）
@@ -300,6 +348,7 @@ String contextualMessage = "[当前机型：CTLS，发动机：Rotax 912] CTLS�
 | **同会话机型切换** | 已验证会话不会重新验证新机型 | 增加"重新提取并验证"逻辑 |
 | **PDF 摄入** | 需手动触发 `/admin/ingest` | 增加定时任务或文件监听自动摄入 |
 | **无用户鉴权** | 所有接口公开访问 | 增加 JWT/API Key 鉴权层 |
+| **流式错误处理** | SSE 中途出错时，前端需通过 `event: error` 感知，不能像非流式那样直接读 HTTP 状态码 | 统一 SSE 错误事件格式，前端增加错误事件监听器 |
 
 ### 非功能性设计约束
 
@@ -313,4 +362,4 @@ String contextualMessage = "[当前机型：CTLS，发动机：Rotax 912] CTLS�
 
 ---
 
-*最后更新：2026-06-07*
+*最后更新：2026-06-07（新增流式请求生命周期、TokenStream 架构标注）*
