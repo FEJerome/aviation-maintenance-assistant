@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  chromadb:
+    image: chromadb/chroma:0.5.5
+    container_name: ama-chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/chroma-data:/chroma/chroma
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ama-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ama-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - LANGCHAIN4J_CHROMA_EMBEDDING_STORE_BASE_URL=http://chromadb:8000
+    volumes:
+      - ./backend/data:/app/data
+    depends_on:
+      chromadb:
+        condition: service_healthy
+    networks:
+      - ama-network
+
+networks:
+  ama-network:
+    driver: bridge
