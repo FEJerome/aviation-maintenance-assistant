@@ -21,6 +21,7 @@
         :key="msg.id"
         :role="msg.role"
         :content="msg.content"
+        :is-streaming="msg.isStreaming"
       />
       <div v-if="loading" class="loading-indicator">
         <span>正在生成...</span>
@@ -58,14 +59,14 @@ async function sendMessage() {
   const text = inputText.value.trim()
   if (!text || loading.value) return
 
-  messages.value.push({ id: Date.now(), role: 'user', content: text })
+  messages.value.push({ id: Date.now(), role: 'user', content: text, isStreaming: false })
   inputText.value = ''
   loading.value = true
   scrollToBottom()
 
   // 预占一个系统消息位，用于流式填充
   const systemMsgId = Date.now() + 1
-  messages.value.push({ id: systemMsgId, role: 'system', content: '' })
+  messages.value.push({ id: systemMsgId, role: 'system', content: '', isStreaming: true })
 
   try {
     const response = await fetch('/api/chat/stream', {
@@ -92,39 +93,49 @@ async function sendMessage() {
 
       buffer += decoder.decode(value, { stream: true })
 
-      // SSE 格式解析：按双换行分割事件
-      const lines = buffer.split('\n')
-      let eventName = ''
-      let eventData = ''
+      // SSE 格式解析：每个事件以 \n\n 结尾
+      const events = buffer.split('\n\n')
+      // 最后一段可能不完整，保留到下一次读取
+      buffer = events.pop() || ''
 
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i]
-        if (line.startsWith('event:')) {
-          eventName = line.substring(6).trim()
-        } else if (line.startsWith('data:')) {
-          eventData = line.substring(5).trim()
-        } else if (line === '' && eventName) {
-          // 一个完整事件
-          if (eventName === 'token') {
-            const msg = messages.value.find(m => m.id === systemMsgId)
-            if (msg) msg.content += eventData
-            scrollToBottom()
-          } else if (eventName === 'complete') {
-            try {
-              const payload = JSON.parse(eventData)
-              if (payload.conversationId) {
-                conversationId.value = payload.conversationId
-              }
-            } catch (e) {
-              // ignore parse error
-            }
-          } else if (eventName === 'error') {
-            const msg = messages.value.find(m => m.id === systemMsgId)
-            if (msg) msg.content = '请求失败：' + eventData
+      for (const eventBlock of events) {
+        if (!eventBlock.trim()) continue
+
+        const lines = eventBlock.split('\n')
+        let eventName = ''
+        let eventData = ''
+
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            eventName = line.substring(6).trim()
+          } else if (line.startsWith('data:')) {
+            eventData = line.substring(5).trim()
           }
-          // 重置
-          eventName = ''
-          eventData = ''
+        }
+
+        if (!eventName) continue
+
+        if (eventName === 'token') {
+          const msg = messages.value.find(m => m.id === systemMsgId)
+          if (msg) msg.content += eventData
+          scrollToBottom()
+        } else if (eventName === 'complete') {
+          const msg = messages.value.find(m => m.id === systemMsgId)
+          if (msg) msg.isStreaming = false
+          try {
+            const payload = JSON.parse(eventData)
+            if (payload.conversationId) {
+              conversationId.value = payload.conversationId
+            }
+          } catch (e) {
+            // ignore parse error
+          }
+        } else if (eventName === 'error') {
+          const msg = messages.value.find(m => m.id === systemMsgId)
+          if (msg) {
+            msg.content = '请求失败：' + eventData
+            msg.isStreaming = false
+          }
         }
       }
     }
@@ -132,14 +143,21 @@ async function sendMessage() {
     const msg = messages.value.find(m => m.id === systemMsgId)
     if (msg) {
       msg.content = '请求失败：' + error.message
+      msg.isStreaming = false
     } else {
       messages.value.push({
         id: Date.now(),
         role: 'system',
-        content: '请求失败：' + error.message
+        content: '请求失败：' + error.message,
+        isStreaming: false
       })
     }
   } finally {
+    // 兜底：如果流结束但消息仍处于流式状态，标记为完成
+    const msg = messages.value.find(m => m.id === systemMsgId)
+    if (msg && msg.isStreaming) {
+      msg.isStreaming = false
+    }
     loading.value = false
     scrollToBottom()
     inputRef.value?.focus()
