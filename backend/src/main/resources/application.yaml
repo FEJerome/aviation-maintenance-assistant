@@ -19,7 +19,7 @@ langchain4j:
       base-url: https://api.deepseek.com/v1
       api-key: ${DEEPSEEK_API_KEY}
       model-name: deepseek-chat
-      temperature: 0.7
+      temperature: 0.2
       timeout: PT60S
   chroma:
     embedding-store:

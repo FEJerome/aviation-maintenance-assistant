@@ -10,6 +10,25 @@ import python from 'highlight.js/lib/languages/python'
 import yaml from 'highlight.js/lib/languages/yaml'
 import sql from 'highlight.js/lib/languages/sql'
 
+/**
+ * 轻量级 Markdown 兜底修正：处理 LLM 偶发的格式错误。
+ *
+ * 兜底原则：只处理"明显畸形"且"修复后无副作用"的情况，
+ * 不试图重写完整的 Markdown 结构，避免误伤合法内容。
+ */
+function sanitizeMarkdown(raw) {
+  if (!raw) return ''
+  return raw
+    // #标题 → # 标题（原子组模拟避免回溯误匹配）
+    .replace(/^(?=(#{1,6}))\1(?=[^ #\n])/gm, '$1 ')
+    // ```bash代码 → ```bash\n代码（原子组模拟避免语言标识被回溯截断）
+    .replace(/^(?=(```[a-zA-Z0-9+-]+))\1(?=[^ \n])/gm, '$1\n')
+    // 数字列表项/无序列表项前如果没有换行，加空行，让 marked 识别为列表
+    // 例如 "步骤1. xxx2. xxx" → "步骤\n\n1. xxx\n\n2. xxx"
+    .replace(/([^\n])(?=\d+\.\s)/g, '$1\n\n')
+    .replace(/([^\n])(?=\n- )/g, '$1\n')
+}
+
 // 按需注册机务场景常见语言，控制包体积
 hljs.registerLanguage('java', java)
 hljs.registerLanguage('bash', bash)
@@ -56,7 +75,8 @@ const ALLOWED_ATTR = ['href', 'target', 'rel', 'class']
  */
 export function renderMarkdown(raw) {
   if (!raw) return ''
-  const html = marked.parse(raw, { async: false })
+  const sanitized = sanitizeMarkdown(raw)
+  const html = marked.parse(sanitized, { async: false })
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,

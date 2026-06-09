@@ -1,6 +1,7 @@
 # 根目录通用忽略
 .DS_Store
 *.log
+.vscode
 
 # 兜底：防止在根目录误执行 Maven 时产生 target/
 target/
