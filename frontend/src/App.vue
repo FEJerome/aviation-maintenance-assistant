@@ -6,6 +6,12 @@
         <span v-if="conversationId" class="conversation-id">
           会话: {{ conversationId.substring(0, 8) }}...
         </span>
+        <button
+          class="toggle-btn"
+          @click="useIncrementalRendering = !useIncrementalRendering"
+        >
+          {{ useIncrementalRendering ? '增量：开' : '增量：关' }}
+        </button>
         <button v-if="conversationId" class="new-chat-btn" @click="startNewChat">
           新会话
         </button>
@@ -21,7 +27,7 @@
         :key="msg.id"
         :role="msg.role"
         :content="msg.content"
-        :is-streaming="msg.isStreaming"
+        :is-streaming="msg.isStreaming && useIncrementalRendering"
       />
       <div v-if="loading" class="loading-indicator">
         <span>正在生成...</span>
@@ -54,6 +60,7 @@ const conversationId = ref(null)
 const loading = ref(false)
 const messagesContainer = ref(null)
 const inputRef = ref(null)
+const useIncrementalRendering = ref(true)
 
 async function sendMessage() {
   const text = inputText.value.trim()
@@ -227,6 +234,21 @@ function scrollToBottom() {
 
 .new-chat-btn:hover {
   background-color: #007bff;
+  color: white;
+}
+
+.toggle-btn {
+  padding: 4px 12px;
+  background-color: transparent;
+  border: 1px solid #28a745;
+  color: #28a745;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.toggle-btn:hover {
+  background-color: #28a745;
   color: white;
 }
 
