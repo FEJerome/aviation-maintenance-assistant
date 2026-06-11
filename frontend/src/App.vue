@@ -3,6 +3,9 @@
     <div class="chat-header">
       <h2>机务维修知识助手</h2>
       <div class="header-actions">
+        <button class="guide-entry-btn" @click="showGuide = true">
+          📘 项目介绍
+        </button>
         <span v-if="conversationId" class="conversation-id">
           会话: {{ conversationId.substring(0, 8) }}...
         </span>
@@ -47,12 +50,15 @@
         发送
       </button>
     </div>
+
+    <ProjectGuide v-if="showGuide" @close="showGuide = false" />
   </div>
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, watch } from 'vue'
 import ChatMessage from './components/ChatMessage.vue'
+import ProjectGuide from './components/ProjectGuide.vue'
 
 const messages = ref([])
 const inputText = ref('')
@@ -61,6 +67,14 @@ const loading = ref(false)
 const messagesContainer = ref(null)
 const inputRef = ref(null)
 const useIncrementalRendering = ref(true)
+const showGuide = ref(false)
+
+// 空对话时自动显示项目介绍弹出层
+watch(messages, (newVal) => {
+  if (newVal.length === 0) {
+    showGuide.value = true
+  }
+}, { immediate: true })
 
 async function sendMessage() {
   const text = inputText.value.trim()
@@ -175,6 +189,7 @@ function startNewChat() {
   conversationId.value = null
   messages.value = []
   inputText.value = ''
+  showGuide.value = true
   inputRef.value?.focus()
 }
 
@@ -234,6 +249,21 @@ function scrollToBottom() {
 
 .new-chat-btn:hover {
   background-color: #007bff;
+  color: white;
+}
+
+.guide-entry-btn {
+  padding: 4px 12px;
+  background-color: transparent;
+  border: 1px solid #6c757d;
+  color: #6c757d;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.guide-entry-btn:hover {
+  background-color: #6c757d;
   color: white;
 }
 
