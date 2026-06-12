@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @RestController
-@RequestMapping("/admin/ingest")
+@RequestMapping("/api/admin/ingest")
 public class DocumentIngestionController {
 
     private final DocumentIngestionService ingestionService;

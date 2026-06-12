@@ -2,6 +2,7 @@
 .DS_Store
 *.log
 .vscode
+.env
 
 # 兜底：防止在根目录误执行 Maven 时产生 target/
 target/

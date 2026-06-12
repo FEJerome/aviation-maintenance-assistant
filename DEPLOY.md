@@ -29,7 +29,7 @@
 
 ## 场景一：Docker Compose 一键启动（推荐）
 
-适合：快速体验完整功能、给面试官演示、本地验收测试。
+适合：快速体验完整功能、给面试官演示、本地验收测试、云服务器生产部署。
 
 ### 1. Clone 仓库
 
@@ -52,13 +52,13 @@ echo "DEEPSEEK_API_KEY=sk-xxxxxxxx" > .env
 
 > ⚠️ **安全提示**：`.env` 文件已被 `.gitignore` 保护，**不要**将其提交到 Git。
 
-### 3. 启动 ChromaDB + 后端
+### 3. 一键启动全部服务
 
 ```bash
 docker compose up -d
 ```
 
-首次构建会比较慢（需要下载 Maven 依赖并打包 JAR），请耐心等待。后续启动秒级完成。
+首次构建会比较慢（需要下载 Maven 依赖、Node 依赖并打包），请耐心等待。后续启动秒级完成。
 
 验证服务状态：
 
@@ -71,21 +71,27 @@ docker compose logs -f backend
 
 # 查看 ChromaDB 健康状态
 curl http://localhost:8000/api/v1/heartbeat
+
+# 测试后端接口
+curl -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"What is AMM?"}'
 ```
 
-### 4. 启动前端
+### 4. 访问应用
+
+- 前端界面：**http://localhost**（或服务器公网 IP）
+- 后端 API：**http://localhost:8080/api/chat**
+- ChromaDB：**http://localhost:8000**
+
+### 5. 文档摄入（仅限内网）
 
 ```bash
-cd frontend
-npm install
-npm run dev
+# 只能从服务器本机执行，公网访问会被 403 拒绝
+curl -X POST http://localhost:8080/api/admin/ingest
 ```
 
-访问地址：
-- 前端界面：**http://localhost:5173**
-- 后端 API：**http://localhost:8080**
-
-### 5. 停止服务
+### 6. 停止服务
 
 ```bash
 # 停止并删除容器（数据保留在 volume 中）
@@ -140,12 +146,16 @@ mvnw.cmd spring-boot:run
 ### 3. 启动前端
 
 ```bash
-cd frontend
+cd ../frontend
 npm install
 npm run dev
 ```
 
----
+访问地址：
+- 前端界面：**http://localhost:5173**
+- 后端 API：**http://localhost:8080/api/chat**
+
+> 注意：开发环境前端通过 Vite 代理 `/api` 到 `http://localhost:8080`，无需 Nginx rewrite。
 
 ## 场景三：云服务器生产部署
 
@@ -154,9 +164,9 @@ npm run dev
 ### 架构建议
 
 ```
-[用户] --HTTPS--> [Nginx 反向代理] --> [前端静态资源 (dist/)]
-                                    --> [Spring Boot 后端 (:8080)]
-                                    --> [ChromaDB (:8000，仅内网访问)]
+[用户] --HTTP/HTTPS--> [Nginx 反向代理] --/api/*--> [Spring Boot 后端 (:8080)]
+                                    --/     --> [前端静态资源 (Nginx :80)]
+                                    --内网  --> [ChromaDB (:8000，仅后端访问)]
 ```
 
 ### 部署步骤
@@ -164,24 +174,18 @@ npm run dev
 1. **准备云服务器**（推荐配置：2C4G，CentOS/Ubuntu）
 2. **安装 Docker + Docker Compose**
 3. **Clone 仓库**并配置 `.env`
-4. **构建前端生产包**：
-   ```bash
-   cd frontend
-   npm install
-   npm run build
-   # 产物在 frontend/dist/ 目录
-   ```
-5. **修改 `docker-compose.yml`**：
+4. **修改 `docker-compose.yml`**：
    - 将 `backend` 服务的端口从 `"8080:8080"` 改为 `"127.0.0.1:8080:8080"`（仅本机访问）
    - 将 `chromadb` 的端口映射删除（仅后端内网访问）
-   - 新增 `nginx` 服务托管前端 dist 并反向代理到后端
-6. **配置 Nginx**（示例）：
+   - 保留 `frontend` 服务对外暴露 80 端口
+5. **配置 Nginx**（示例）：
    ```nginx
    server {
        listen 80;
        server_name ama.pandazi.cn;
        return 301 https://$server_name$request_uri;
    }
+   
    server {
        listen 443 ssl;
        server_name ama.pandazi.cn;
@@ -192,10 +196,22 @@ npm run dev
        }
 
        location /api/ {
-           proxy_pass http://backend:8080/;
+           proxy_pass http://backend:8080/api/;
            proxy_set_header Host $host;
            proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
        }
+   }
+   ```
+6. **限制 `/api/admin/ingest` 内网访问**：
+   ```nginx
+   location /api/admin/ingest {
+       allow 127.0.0.1;
+       allow 10.0.0.0/8;
+       allow 172.16.0.0/12;
+       allow 192.168.0.0/16;
+       deny all;
+       proxy_pass http://backend:8080/api/admin/ingest;
    }
    ```
 7. **启动服务**：`docker compose up -d`
@@ -252,9 +268,9 @@ npm run dev
   volumes:
     - ./backend/chroma-data:/chroma/chroma
   ```
-- 若数据已丢失，需重新执行 PDF 摄入：
+- 若数据已丢失，需重新执行 PDF 摄入（仅限内网）：
   ```bash
-  curl -X POST http://localhost:8080/admin/ingest
+  curl -X POST http://localhost:8080/api/admin/ingest
   ```
 
 ### Q4：`./mvnw spring-boot:run` 报 `JAVA_HOME` 错误 / 类文件版本不匹配
@@ -271,26 +287,56 @@ npm run dev
 
 ### Q5：前端访问后端报 CORS 错误
 
-**原因**：前端直接访问后端 IP/端口，跨域被浏览器拦截。
+**原因**：生产环境 Nginx 未正确代理 `/api` 请求。
 
 **解决**：
+- 确认 `docker-compose.yml` 中 `frontend` 服务已启动。
+- 确认 `frontend/nginx.conf` 中 `/api/` 的 `proxy_pass` 指向正确。
 - 开发环境：前端 `vite.config.js` 中已配置代理 `/api` 到 `http://localhost:8080`，请确保前端请求路径以 `/api` 开头。
-- 生产环境：通过 Nginx 反向代理，使前端和后端处于同一域名下。
 
 ### Q6：如何确认 RAG 检索是否工作正常？
 
 ```bash
-# 1. 先确保 PDF 已摄入
-curl -X POST http://localhost:8080/admin/ingest
+# 1. 先确保 PDF 已摄入（仅限内网）
+curl -X POST http://localhost:8080/api/admin/ingest
 
 # 2. 测试一个通用知识问题
-curl -X POST http://localhost:8080/chat \
+curl -X POST http://localhost:8080/api/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "What is AMM?"}'
 ```
 
 如果返回的回答中包含手册引用来源（如 `来源：... Page 36`），说明 RAG 链路正常工作。
 
+### Q7：接口返回 429 Too Many Requests
+
+**原因**：触发了限流保护：
+
+- IP 限流：默认 20 次/小时/IP。
+- 全局日限额：DeepSeek 总调用次数达到 500 次/天。
+
+**解决**：
+
+- 如果是 IP 限流，等待 1 小时后重试。
+- 如果是全局日限额耗尽，需次日自动恢复；如需临时调整，修改 `DeepSeekQuotaService` 中的 `DAILY_LIMIT`。
+
 ---
 
-*最后更新：2026-06-07*
+## 生产环境补充验证
+
+以下项目**无法**在本地开发环境完全模拟，必须在云服务器 + Nginx 部署完成后验证：
+
+| 验证项 | 验证方式 | 预期结果 |
+|--------|---------|---------|
+| 真实 IP 限流 | 使用不同公网 IP 或代理访问 `/api/chat` | 每个 IP 独立计数，触发限流后返回 429 |
+| Nginx 层内网限制 | 从公网访问 `/api/admin/ingest` | Nginx 直接返回 403，请求不会到达后端 |
+| HTTPS 跳转 | 访问 `http://域名` | 自动 301 跳转到 `https://域名` |
+| 域名解析 | 通过域名访问前端与后端 | 全部正常 |
+| ChromaDB 不对外暴露 | 从外部访问 `http://服务器IP:8000` | 连接超时或拒绝 |
+| 安全组/防火墙 | 仅开放 80、443 端口 | 其他端口不可达 |
+
+> 💡 建议在首次上线时逐项勾选，完成后截图保存作为部署验收记录。
+
+---
+
+*最后更新：2026-06-12*

@@ -5,8 +5,11 @@ import cn.pandazi.aviation_maintenance_assistant.chat.routing.AircraftInfoExtrac
 import cn.pandazi.aviation_maintenance_assistant.chat.routing.TopicClassifier;
 import cn.pandazi.aviation_maintenance_assistant.chat.session.ChatSessionStore;
 import cn.pandazi.aviation_maintenance_assistant.chat.session.SessionContext;
+import cn.pandazi.aviation_maintenance_assistant.service.DeepSeekQuotaService;
 import cn.pandazi.aviation_maintenance_assistant.validation.dto.ValidationResult;
 import cn.pandazi.aviation_maintenance_assistant.validation.service.AircraftValidationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -27,16 +30,27 @@ import java.util.UUID;
 @Service
 public class MaintenanceChatService {
 
+    private static final Logger log = LoggerFactory.getLogger(MaintenanceChatService.class);
+
+    private static final String FALLBACK_MESSAGE =
+            "当前 AI 服务暂不可用，请稍后重试。这不是维修建议，最终决策请以官方 AMM 手册为准。";
+
+    private static final String QUOTA_EXHAUSTED_MESSAGE =
+            "当前 AI 服务今日额度已用完，请明日再试。这不是维修建议，最终决策请以官方 AMM 手册为准。";
+
     private final Assistant assistant;
     private final AircraftValidationService validationService;
     private final ChatSessionStore sessionStore;
+    private final DeepSeekQuotaService quotaService;
 
     public MaintenanceChatService(Assistant assistant,
                                   AircraftValidationService validationService,
-                                  ChatSessionStore sessionStore) {
+                                  ChatSessionStore sessionStore,
+                                  DeepSeekQuotaService quotaService) {
         this.assistant = assistant;
         this.validationService = validationService;
         this.sessionStore = sessionStore;
+        this.quotaService = quotaService;
     }
 
     /**
@@ -47,60 +61,65 @@ public class MaintenanceChatService {
      * @return 包含回复和 conversationId 的响应
      */
     public ChatResponse process(String conversationId, String message) {
-        // 会话初始化：为空则生成新 ID
-        if (conversationId == null || conversationId.isBlank()) {
-            conversationId = UUID.randomUUID().toString();
-        }
-
-        SessionContext session = sessionStore.get(conversationId);
-
-        // 已验证会话：直接基于机型上下文走 RAG
-        if (session != null && session.validated()) {
-            String contextualMessage = buildContextualMessage(session, message);
-            String reply = assistant.chat(contextualMessage);
-            return new ChatResponse(reply, conversationId);
-        }
-
-        // 路由分类：是否涉及关键系统
-        boolean needsAircraft = TopicClassifier.needsAircraftInfo(message);
-        if (!needsAircraft) {
-            String reply = assistant.chat(message);
-            return new ChatResponse(reply, conversationId);
-        }
-
-        // 提取机型和发动机
-        AircraftInfoExtractor.ExtractedAircraftInfo info = AircraftInfoExtractor.extract(message);
-        if (!info.isComplete()) {
-            String reply = "为了提供准确的维修信息，请提供机型（如 B737-800）和发动机型号（如 CFM56-7B）。";
-            return new ChatResponse(reply, conversationId);
-        }
-
-        // 验证机型-发动机匹配
-        ValidationResult result = validationService.validate(info.model(), info.engine());
-
-        return switch (result) {
-            case MATCH -> {
-                SessionContext newSession = new SessionContext(info.model(), info.engine(), true);
-                sessionStore.put(conversationId, newSession);
-                String contextualMessage = buildContextualMessage(newSession, message);
-                String reply = assistant.chat(contextualMessage);
-                yield new ChatResponse(reply, conversationId);
+        try {
+            // 会话初始化：为空则生成新 ID
+            if (conversationId == null || conversationId.isBlank()) {
+                conversationId = UUID.randomUUID().toString();
             }
-            case MISMATCH -> {
-                String reply = String.format(
-                        "机型 %s 与发动机 %s 不匹配。请核实后重新提供。",
-                        info.model(), info.engine()
-                );
-                yield new ChatResponse(reply, conversationId);
+
+            SessionContext session = sessionStore.get(conversationId);
+
+            // 已验证会话：直接基于机型上下文走 RAG
+            if (session != null && session.validated()) {
+                String contextualMessage = buildContextualMessage(session, message);
+                String reply = callAssistant(contextualMessage);
+                return new ChatResponse(reply, conversationId);
             }
-            case UNKNOWN -> {
-                String reply = String.format(
-                        "机型 %s 或发动机 %s 暂未在系统中收录。当前仅支持常见机型组合，具体程序请查阅官方 AMM。",
-                        info.model(), info.engine()
-                );
-                yield new ChatResponse(reply, conversationId);
+
+            // 路由分类：是否涉及关键系统
+            boolean needsAircraft = TopicClassifier.needsAircraftInfo(message);
+            if (!needsAircraft) {
+                String reply = callAssistant(message);
+                return new ChatResponse(reply, conversationId);
             }
-        };
+
+            // 提取机型和发动机
+            AircraftInfoExtractor.ExtractedAircraftInfo info = AircraftInfoExtractor.extract(message);
+            if (!info.isComplete()) {
+                String reply = "为了提供准确的维修信息，请提供机型（如 B737-800）和发动机型号（如 CFM56-7B）。";
+                return new ChatResponse(reply, conversationId);
+            }
+
+            // 验证机型-发动机匹配
+            ValidationResult result = validationService.validate(info.model(), info.engine());
+
+            return switch (result) {
+                case MATCH -> {
+                    SessionContext newSession = new SessionContext(info.model(), info.engine(), true);
+                    sessionStore.put(conversationId, newSession);
+                    String contextualMessage = buildContextualMessage(newSession, message);
+                    String reply = callAssistant(contextualMessage);
+                    yield new ChatResponse(reply, conversationId);
+                }
+                case MISMATCH -> {
+                    String reply = String.format(
+                            "机型 %s 与发动机 %s 不匹配。请核实后重新提供。",
+                            info.model(), info.engine()
+                    );
+                    yield new ChatResponse(reply, conversationId);
+                }
+                case UNKNOWN -> {
+                    String reply = String.format(
+                            "机型 %s 或发动机 %s 暂未在系统中收录。当前仅支持常见机型组合，具体程序请查阅官方 AMM。",
+                            info.model(), info.engine()
+                    );
+                    yield new ChatResponse(reply, conversationId);
+                }
+            };
+        } catch (Exception e) {
+            log.error("Failed to process chat request", e);
+            return new ChatResponse(FALLBACK_MESSAGE, conversationId);
+        }
     }
 
     /**
@@ -125,14 +144,14 @@ public class MaintenanceChatService {
             // 已验证会话：直接基于机型上下文走流式 RAG
             if (session != null && session.validated()) {
                 String contextualMessage = buildContextualMessage(session, message);
-                streamAssistantReply(contextualMessage, finalConversationId, emitter);
+                callAssistantStream(contextualMessage, finalConversationId, emitter);
                 return;
             }
 
             // 路由分类：是否涉及关键系统
             boolean needsAircraft = TopicClassifier.needsAircraftInfo(message);
             if (!needsAircraft) {
-                streamAssistantReply(message, finalConversationId, emitter);
+                callAssistantStream(message, finalConversationId, emitter);
                 return;
             }
 
@@ -152,7 +171,7 @@ public class MaintenanceChatService {
                     SessionContext newSession = new SessionContext(info.model(), info.engine(), true);
                     sessionStore.put(finalConversationId, newSession);
                     String contextualMessage = buildContextualMessage(newSession, message);
-                    streamAssistantReply(contextualMessage, finalConversationId, emitter);
+                    callAssistantStream(contextualMessage, finalConversationId, emitter);
                 }
                 case MISMATCH -> {
                     String reply = String.format(
@@ -170,8 +189,30 @@ public class MaintenanceChatService {
                 }
             }
         } catch (Exception e) {
-            emitError("Internal error: " + e.getMessage(), emitter);
+            log.error("Failed to process chat stream request", e);
+            emitError(FALLBACK_MESSAGE, emitter);
         }
+    }
+
+    /**
+     * 调用 Assistant 阻塞接口，并在调用前检查全局日限额。
+     */
+    private String callAssistant(String message) {
+        if (quotaService.isExhausted() || !quotaService.tryAcquire()) {
+            return QUOTA_EXHAUSTED_MESSAGE;
+        }
+        return assistant.chat(message);
+    }
+
+    /**
+     * 调用 Assistant 流式接口，并在调用前检查全局日限额。
+     */
+    private void callAssistantStream(String message, String conversationId, SseEmitter emitter) {
+        if (quotaService.isExhausted() || !quotaService.tryAcquire()) {
+            emitError(QUOTA_EXHAUSTED_MESSAGE, emitter);
+            return;
+        }
+        streamAssistantReply(message, conversationId, emitter);
     }
 
     /**
@@ -188,10 +229,14 @@ public class MaintenanceChatService {
                         }
                     })
                     .onCompleteResponse(response -> emitComplete(null, conversationId, emitter))
-                    .onError(error -> emitError("LLM error: " + error.getMessage(), emitter))
+                    .onError(error -> {
+                        log.error("LLM stream error", error);
+                        emitError(FALLBACK_MESSAGE, emitter);
+                    })
                     .start();
         } catch (Exception e) {
-            emitError("Failed to start stream: " + e.getMessage(), emitter);
+            log.error("Failed to start LLM stream", e);
+            emitError(FALLBACK_MESSAGE, emitter);
         }
     }
 

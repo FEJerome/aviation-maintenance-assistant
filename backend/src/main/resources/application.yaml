@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: aviation-maintenance-assistant
+  task:
+    scheduling:
+      enabled: true
 
 app:
   rag:
@@ -12,6 +15,17 @@ app:
       min-score: 0.6
     query-translation:
       enabled: true
+
+# IP 限流配置
+rate-limit:
+  chat:
+    capacity: 20
+    refill-period: 1h
+
+# DeepSeek 全局日限额配置
+deepseek:
+  quota:
+    daily-limit: 500
 
 langchain4j:
   open-ai:

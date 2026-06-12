@@ -9,6 +9,7 @@
 [![LangChain4j](https://img.shields.io/badge/LangChain4j-1.14.1-blue)](https://github.com/langchain4j/langchain4j)
 [![DeepSeek](https://img.shields.io/badge/LLM-DeepSeek-1E90FF)](https://www.deepseek.com/)
 [![ChromaDB](https://img.shields.io/badge/VectorDB-ChromaDB-FF6600)](https://www.trychroma.com/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
@@ -50,12 +51,16 @@
 
 | 特性 | 说明 |
 |------|------|
-| 🔍 **RAG 检索增强** | 基于 FAA AC、AMM 等公开维修手册，检索相关片段后由 DeepSeek 生成回答，并标注来源 |
+| 🔍 **RAG 检索增强** | 基于 AMM 维修手册、FAA 法规等公开资料，检索相关片段后由 DeepSeek 生成回答，并标注来源 |
 | 🤖 **Agent 机型验证** | 对话前强制校验飞机型号与发动机型号匹配，不匹配即拦截 |
 | 🛡️ **确定性路由** | 发动机/飞控/起落架等关键系统走硬性代码路由，**不走 LLM 自路由**，杜绝概率性错误 |
-| 💬 **会话管理** | 内存 LRU 会话存储，支持 `conversationId` 多轮续聊，已验证机型自动注入上下文 |
+| 💬 **会话管理** | 内存会话存储，支持 `conversationId` 多轮续聊，已验证机型自动注入上下文 |
 | ⚡ **Java 21 虚拟线程** | 基于 Virtual Threads 实现高并发 IO 密集型服务，阻塞成本趋近于零 |
 | 🧠 **纯本地嵌入模型** | all-MiniLM-L6-v2 本地 ONNX 推理，零外部 Embedding API 依赖，20MB 轻量 |
+| 🛡️ **多层限流保护** | Bucket4j 令牌桶限流，默认 20 次/小时/IP；全局 DeepSeek 调用 500 次/天上限，防止 Token 被恶意刷光 |
+| 🔄 **优雅降级** | DeepSeek 异常时返回固定友好提示，避免前端空白或暴露内部错误 |
+| 🐳 **Docker 一键部署** | `docker compose up -d` 启动前端 + 后端 + ChromaDB |
+| 📘 **项目介绍模式** | 首次进入自动弹出项目导览，方便非航空背景面试官快速理解项目价值 |
 
 ---
 
@@ -80,7 +85,7 @@ flowchart LR
 
 ### 请求生命周期（以"CTLS 发动机滑油压力"为例）
 
-1. **用户输入** → `POST /chat` → 后端接收 `ChatRequest`
+1. **用户输入** → `POST /api/chat` → 后端接收 `ChatRequest`
 2. **路由分类** → `TopicClassifier` 识别"发动机"关键词 → 判定为关键系统
 3. **信息提取** → `AircraftInfoExtractor` 从 query 中提取机型（CTLS）和发动机（Rotax 912）
 4. **机型验证** → `AircraftValidationService` 查询硬编码匹配表 → **MATCH**
@@ -111,18 +116,15 @@ cd aviation-maintenance-assistant
 cp .env.example .env
 # 编辑 .env，填入你的 DEEPSEEK_API_KEY
 
-# 3. 一键启动（ChromaDB + 后端）
+# 3. 一键启动（前端 + 后端 + ChromaDB）
 docker compose up -d
-
-# 4. 启动前端
-cd frontend
-npm install
-npm run dev
 ```
 
-访问前端：**http://localhost:5173**
+访问前端：**http://localhost**
 
-后端 API：**http://localhost:8080**
+后端 API：**http://localhost:8080/api/chat**
+
+详细部署文档见 [DEPLOY.md](DEPLOY.md)。
 
 ### 方式二：手动启动（开发调试）
 
@@ -142,6 +144,10 @@ cd ../frontend
 npm install
 npm run dev
 ```
+
+访问前端：**http://localhost:5173**
+
+后端 API：**http://localhost:8080/api/chat**
 
 > 📄 详细部署文档见 [DEPLOY.md](DEPLOY.md)。
 
@@ -165,14 +171,22 @@ npm run dev
 │   ├── src/
 │   │   ├── App.vue          # 聊天主界面
 │   │   └── components/      # 聊天消息组件
+│   ├── Dockerfile           # 前端 Nginx 镜像
+│   ├── nginx.conf           # 前端 Nginx 反向代理配置
 │   └── package.json
 ├── docs/                    # 项目文档
 │   ├── API.md               # 接口文档
 │   ├── ARCHITECTURE.md      # 架构说明
 │   ├── ADR/                 # 架构决策记录
-│   └── test-reports/        # 测试报告
+│   └── design/              # 功能设计文档
 ├── docker-compose.yml       # Docker Compose 编排
 ├── DEPLOY.md                # 部署指南
+├── LICENSE                  # MIT 许可证
+├── scripts/                 # 测试与工具脚本
+│   └── tests/               # 手动/半自动验收脚本
+│       ├── integration/     # 后端集成测试
+│       ├── e2e/             # 端到端测试
+│       └── docker/          # Docker 部署验证
 └── README.md                # 本文件
 ```
 
@@ -212,7 +226,7 @@ npm run dev
 
 ## 📝 License
 
-本项目为**求职作品**，代码开源仅供学习交流。
+本项目基于 [MIT License](LICENSE) 开源。
 
 ---
 

@@ -1,0 +1,12 @@
+# 测试环境配置：降低限流与配额阈值，便于快速验证
+
+# IP 限流：2 次 / 10 秒
+rate-limit:
+  chat:
+    capacity: 2
+    refill-period: 10s
+
+# 全局日限额：3 次 / 天
+deepseek:
+  quota:
+    daily-limit: 3
