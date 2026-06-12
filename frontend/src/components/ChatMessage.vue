@@ -144,10 +144,12 @@ watch(
 }
 
 .message-bubble {
-  max-width: 70%;
+  max-width: 85%;
   padding: 10px 14px;
   border-radius: 12px;
-  word-wrap: break-word;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
 }
 
 .user .message-bubble {

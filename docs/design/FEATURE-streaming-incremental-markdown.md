@@ -313,9 +313,8 @@ if (eventName === 'token') {
 | 时间 | 变更 | 原因 |
 |------|------|------|
 | 2026-06-12 | 取消 170~200 句末句号急切切分 | 避免切在 `**加粗**` 等 Inline Markdown 标记中间，导致星号残留和样式错乱 |
-| 2026-06-12 | 流式完成后不重渲染 | 避免 `isStreaming` 切换时的 DOM 结构替换，解决闪烁和样式突变问题 |
-
-## 相关文档
+| 2026-06-12 | CSS 换行优化：`.message-bubble` 改为 `max-width: 85%`、`word-break: keep-all`、`overflow-wrap: break-word`、`line-break: strict` | 避免中英文混排时左括号等标点被单独留在行尾，改善消息气泡内不自然换行 |
+| 2026-06-12 | 前端兜底修正数字列表格式：`sanitizeMarkdown` 把 "1.检查 2.核实" 修复为 "1. 检查\n2. 核实" | LLM 经常把数字列表项连成一行，导致 marked.js 无法识别为列表，配合 `word-break: keep-all` 后产生不自然换行 |
 
 - [ADR-004：LLM 流式输出](../ADR/ADR-004-streaming-output-over-blocking.md)
 - [ADR-005：Markdown 输出强制策略](../ADR/ADR-005-markdown-output-enforcement.md)
