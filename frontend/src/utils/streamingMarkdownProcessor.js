@@ -7,13 +7,6 @@ import { renderMarkdown } from './markdownRenderer.js'
 const MAX_STREAMING_BUFFER_LENGTH = 200
 
 /**
- * 进入急切模式的字符阈值。
- * 0 ~ 170：自由累积，不触发句子级分割。
- * 170 ~ 200：急切模式，遇非列表序号的句末句号即分割。
- */
-const SENTENCE_SPLIT_THRESHOLD = 170
-
-/**
  * 判断当前文本是否处于未闭合的代码块内。
  * @param {string} text
  * @returns {boolean}
@@ -24,36 +17,6 @@ function isInsideCodeBlock(text) {
 }
 
 /**
- * 从后往前查找最后一个非列表序号的句末句号位置。
- *
- * 规则：
- * - 句号前面不能是数字（排除列表序号如 1. 2.）
- * - 句号后面是空格，空格后的第一个非空字符不能是数字
- *   （排除 "检查。 2. 整流罩" 这类情况）
- *
- * @param {string} text
- * @returns {number} - 分割点索引（句号后跳过空格的位置），-1 表示未找到
- */
-function findLastSentenceEnd(text) {
-  for (let i = text.length - 1; i >= 0; i--) {
-    if ('。！？.!?'.includes(text[i])) {
-      // 前面不能是数字（排除列表序号）
-      if (i > 0 && /\d/.test(text[i - 1])) continue
-
-      // 跳过句号后的空格
-      let end = i + 1
-      while (end < text.length && /\s/.test(text[end])) end++
-
-      // 后面不能是数字开头（排除 "检查。 2. 整流罩"）
-      if (end < text.length && /\d/.test(text[end])) continue
-
-      return end
-    }
-  }
-  return -1
-}
-
-/**
  * 查找段落边界，返回已确认内容的结束位置索引。
  *
  * 边界优先级（从高到低）：
@@ -61,8 +24,10 @@ function findLastSentenceEnd(text) {
  * 2. 代码块闭合（``` 成对）
  * 3. 列表项切换（新的 1. / - ）
  * 4. 引用块边界（新的 > ）
- * 5. 句末句号分割（两段式阈值：170~200 急切模式）
- * 6. 200 字符兜底硬切
+ * 5. 200 字符兜底硬切
+ *
+ * 注意：不再使用"句末句号急切切分"策略，以避免切在 Markdown Inline
+ * 标记（如 **加粗 **、*斜体*）中间，导致已确认块渲染样式错乱。
  *
  * @param {string} text - 当前 streamingBuffer
  * @returns {number} - 边界索引（-1 表示未找到）
@@ -107,17 +72,8 @@ export function findParagraphBoundary(text) {
     return blockquoteBoundary.index + 1
   }
 
-  // 状态 6：两段式阈值下的句末句号分割
-  // 0 ~ 170：自由累积，不触发
-  // 170 ~ 200：急切模式，遇非列表序号的句末句号即分割
-  if (text.length >= SENTENCE_SPLIT_THRESHOLD) {
-    const sentenceEnd = findLastSentenceEnd(text)
-    if (sentenceEnd > 0) {
-      return sentenceEnd
-    }
-  }
-
-  // 状态 7：200 字符兜底硬切
+  // 状态 6：200 字符兜底硬切
+  // 仅在无自然边界时触发，避免缓冲无限累积。
   if (text.length >= MAX_STREAMING_BUFFER_LENGTH) {
     return MAX_STREAMING_BUFFER_LENGTH
   }
@@ -165,6 +121,28 @@ export function processStreamingContent(
   }
 
   streamingBuffer.value = remaining
+}
+
+/**
+ * 流式结束时，将剩余缓冲强制渲染并追加到已确认块。
+ *
+ * @param {Ref<string>} streamingBuffer - 当前流式缓冲 ref（会被清空）
+ * @param {Array<{html: string}>} confirmedBlocks - 已确认的 HTML 块数组（会被修改）
+ * @param {Function} [renderFn] - 渲染函数，默认 renderMarkdown
+ */
+export function finalizeStreamingContent(
+  streamingBuffer,
+  confirmedBlocks,
+  renderFn = renderMarkdown
+) {
+  const remaining = streamingBuffer.value.trim()
+  if (remaining) {
+    const html = renderFn(remaining)
+    if (html && html.trim()) {
+      confirmedBlocks.value.push({ html })
+    }
+  }
+  streamingBuffer.value = ''
 }
 
 /**

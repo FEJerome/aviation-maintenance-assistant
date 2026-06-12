@@ -1,21 +1,22 @@
 <template>
   <div :class="['message-row', roleClass]">
     <div class="message-bubble">
-      <!-- 流式接收中：段落级增量渲染 -->
-      <template v-if="isStreaming">
-        <!-- 已确认的段落：渲染为 Markdown -->
+      <!-- 流式消息：已确认块 + 当前缓冲，DOM 结构在流式结束前后保持一致 -->
+      <template v-if="hasStreamingContent">
         <div
           v-for="(block, index) in confirmedBlocks"
           :key="`block-${index}`"
           class="message-block"
           v-html="block.html"
         />
-        <!-- 正在累积的段落：纯文本显示 -->
-        <div class="message-content message-content-plain">
+        <div
+          v-if="isStreaming"
+          class="message-content message-content-plain"
+        >
           {{ streamingBuffer }}
         </div>
       </template>
-      <!-- 流式完成后：一次性渲染全部内容 -->
+      <!-- 非流式消息：兜底一次性渲染 -->
       <div
         v-else
         class="message-content message-content-markdown"
@@ -28,7 +29,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { renderMarkdown } from '../utils/markdownRenderer.js'
-import { findParagraphBoundary } from '../utils/streamingMarkdownProcessor.js'
+import { findParagraphBoundary, finalizeStreamingContent } from '../utils/streamingMarkdownProcessor.js'
 
 const props = defineProps({
   role: {
@@ -63,14 +64,22 @@ const streamingBuffer = ref('')
 let lastProcessedIndex = 0
 
 /**
- * 流式完成后的完整渲染（兜底路径）
+ * 流式完成后的完整渲染（兜底路径，用于非流式消息）
  */
 const renderedContent = computed(() => {
   return renderMarkdown(props.content)
 })
 
 /**
- * 监听 isStreaming 状态变化：开始/结束流式时重置状态
+ * 是否使用流式渲染结构（已确认块 + 缓冲）。
+ * 只要有已确认块或正在流式中，就使用该结构；否则使用兜底渲染。
+ */
+const hasStreamingContent = computed(() => {
+  return confirmedBlocks.value.length > 0 || props.isStreaming
+})
+
+/**
+ * 监听 isStreaming 状态变化：开始/结束流式时重置或 flush 状态
  */
 watch(() => props.isStreaming, (newVal, oldVal) => {
   if (newVal && !oldVal) {
@@ -79,9 +88,8 @@ watch(() => props.isStreaming, (newVal, oldVal) => {
     streamingBuffer.value = ''
     lastProcessedIndex = 0
   } else if (!newVal && oldVal) {
-    // 结束流式：重置状态，让 renderedContent 接管
-    confirmedBlocks.value = []
-    streamingBuffer.value = ''
+    // 结束流式：flush 剩余缓冲到已确认块，保持 DOM 结构稳定
+    finalizeStreamingContent(streamingBuffer, confirmedBlocks)
     lastProcessedIndex = 0
   }
 })

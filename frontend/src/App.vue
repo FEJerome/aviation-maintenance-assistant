@@ -22,8 +22,18 @@
     </div>
 
     <div class="chat-messages" ref="messagesContainer">
-      <div v-if="messages.length === 0" class="empty-state">
-        请输入问题，例如：B737-800 发动机滑油压力
+      <div v-if="messages.length === 0" class="suggested-questions">
+        <h3 class="suggested-questions-title">有什么可以帮您？</h3>
+        <div class="suggested-questions-grid">
+          <button
+            v-for="(question, index) in suggestedQuestions"
+            :key="index"
+            class="suggested-question-card"
+            @click="sendSuggestedQuestion(question)"
+          >
+            {{ question }}
+          </button>
+        </div>
       </div>
       <ChatMessage
         v-for="msg in messages"
@@ -69,12 +79,24 @@ const inputRef = ref(null)
 const useIncrementalRendering = ref(true)
 const showGuide = ref(false)
 
+const suggestedQuestions = [
+  'CTLS 飞机 Rotax 912 发动机滑油压力标准值是多少？',
+  'WT9 飞机起落架收放系统的日常检查要求是什么？',
+  '飞机结构修理中，铆接修理的一般规范有哪些？',
+  'B737-800 发动机滑油压力低，应该如何排故？'
+]
+
 // 空对话时自动显示项目介绍弹出层
 watch(messages, (newVal) => {
   if (newVal.length === 0) {
     showGuide.value = true
   }
 }, { immediate: true })
+
+function sendSuggestedQuestion(question) {
+  inputText.value = question
+  sendMessage()
+}
 
 async function sendMessage() {
   const text = inputText.value.trim()
@@ -286,13 +308,6 @@ function scrollToBottom() {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-}
-
-.empty-state {
-  text-align: center;
-  color: #999;
-  margin-top: 40px;
-  font-size: 14px;
 }
 
 .loading-indicator {

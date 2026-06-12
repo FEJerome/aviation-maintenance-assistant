@@ -17,8 +17,9 @@
 2. 正在接收段落：纯文本打字机效果，稳定不抖动
 3. 段落切换：从纯文本到格式化 HTML 的过渡平滑、无闪烁
 4. 性能可控：渲染频率从"每 token"降到"每段落"（通常 2~10 秒一次）
-5. 语义分割：170~200 字符区间按句末句号分割，避免句子被切两半
+5. 语义分割：只在明确的 Markdown 块边界处切分（空行、代码块闭合、列表项切换、引用块边界）
 6. 兜底稳定：超过 200 字符硬切，避免 buffer 无限累积
+7. 流式完成后不重渲染：保持 DOM 结构稳定，避免完成瞬间的闪烁和样式突变
 
 ## 方案对比
 
@@ -75,11 +76,9 @@
 2. **代码块闭合**：``` 成对出现时，整个代码块一次性固化。
 3. **列表项切换**：新的有序列表项（`\d+\.\s`）或无序列表项（`-\s`）开始前，前一个列表项已完整。
 4. **引用块边界**：新的引用行（`>\s`）出现前，前一个引用块已完整。
-5. **句末句号分割**（两段式阈值）：
-   - **0 ~ 170 字符**：自由累积，不触发句子级分割，给 LLM 自然输出的时间。
-   - **170 ~ 200 字符**：急切模式，遇到非列表序号的句末句号（。！？.!?）+ 空格，立即分割。
-   - **正则规则**：`(?<!\d)[。！？.!?]\s+(?![\d])` —— 前面不是数字（排除 `2.` 这类列表序号），后面不是数字开头（排除 `检查。2. 整流罩` 这类情况）。
-6. **200 字符兜底**：超过 200 字符且无自然边界时，按 200 字符硬切。
+5. **200 字符兜底**：超过 200 字符且无自然边界时，按 200 字符硬切。
+
+> **历史调整**：早期版本曾在 170~200 字符区间使用"句末句号急切切分"策略，希望提升流式感。但实际测试发现，句末句号不是 Markdown 块边界，切分点经常落在 Inline Markdown 标记（如 `**加粗**`）中间，导致已确认段落渲染出星号残留或样式错乱。因此该策略被取消，改为只在明确的 Markdown 块边界处切分。
 
 **代码块状态机**：
 
@@ -87,26 +86,6 @@
 function isInsideCodeBlock(text) {
   const fenceMatches = text.match(/^```[a-zA-Z0-9+-]*$/gm)
   return fenceMatches && fenceMatches.length % 2 === 1
-}
-```
-
-**句末句号分割实现**：
-
-```javascript
-function findLastSentenceEnd(text) {
-  for (let i = text.length - 1; i >= 0; i--) {
-    if ('。！？.!?'.includes(text[i])) {
-      // 前面不能是数字（排除列表序号）
-      if (i > 0 && /\d/.test(text[i - 1])) continue
-      // 跳过句号后的空格
-      let end = i + 1
-      while (end < text.length && /\s/.test(text[end])) end++
-      // 后面不能是数字开头（排除 "检查。 2. 整流罩"）
-      if (end < text.length && /\d/.test(text[end])) continue
-      return end
-    }
-  }
-  return -1
 }
 ```
 
@@ -138,27 +117,45 @@ function processStreamingContent(fullContent) {
 }
 ```
 
+**流式结束时的 flush**：
+
+当 `isStreaming` 从 `true` 变为 `false` 时，调用 `finalizeStreamingContent` 将 `streamingBuffer` 中剩余的最后一段文本强制渲染并追加到 `confirmedBlocks`，保持 DOM 结构稳定。
+
+```javascript
+function finalizeStreamingContent(streamingBuffer, confirmedBlocks) {
+  const remaining = streamingBuffer.value.trim()
+  if (remaining) {
+    const html = renderMarkdown(remaining)
+    if (html && html.trim()) {
+      confirmedBlocks.value.push({ html })
+    }
+  }
+  streamingBuffer.value = ''
+}
+```
+
 ### 4. ChatMessage.vue 模板改造
 
 ```vue
 <template>
   <div :class="['message-row', roleClass]">
     <div class="message-bubble">
-      <!-- 流式接收中：双 buffer 渲染 -->
-      <template v-if="isStreaming">
-        <!-- 已确认的段落：渲染为 Markdown -->
+      <!-- 流式消息：已确认块 + 当前缓冲，DOM 结构在流式结束前后保持一致 -->
+      <template v-if="hasStreamingContent">
         <div
           v-for="(block, index) in confirmedBlocks"
           :key="`block-${index}`"
           class="message-block"
           v-html="block.html"
         />
-        <!-- 正在累积的段落：纯文本显示 -->
-        <div class="message-content message-content-plain">
+        <div
+          v-if="isStreaming"
+          class="message-content message-content-plain"
+        >
           {{ streamingBuffer }}
         </div>
       </template>
-      <!-- 流式完成后：一次性渲染全部内容 -->
+      <!-- 非流式消息：兜底一次性渲染 -->
       <div
         v-else
         class="message-content message-content-markdown"
@@ -168,6 +165,12 @@ function processStreamingContent(fullContent) {
   </div>
 </template>
 ```
+
+**关键设计**：
+
+- 流式消息在 `isStreaming` 变为 `false` 后，不切换为新的容器，而是继续展示 `confirmedBlocks`。
+- `hasStreamingContent` 判断：只要有已确认块或正在流式中，就使用流式结构；否则使用兜底渲染。
+- 非流式消息（如历史消息、错误提示）仍使用 `renderedContent` 一次性渲染。
 
 ### 5. App.vue 调用方式调整
 
@@ -219,11 +222,12 @@ if (eventName === 'token') {
 
 ### 7. 性能优化
 
-- **两段式阈值**：170 字符前不扫描句末句号，减少无效正则匹配；170 字符后才进入急切模式。
+- **只在硬边界切分**：避免在 Inline Markdown 标记中间切分，减少渲染异常。
 - **增量处理**：只处理 `content` 新增的部分（`slice(lastProcessedIndex)`），避免 O(n²) 重复扫描。
 - **渲染节流**：段落边界检测只在 `content` 变化时触发，不逐 token 触发（Vue 响应式批量更新已做节流）。
 - **DOM 复用**：`v-for` 的 `confirmedBlocks` 使用 `key="block-${index}"`，Vue 复用已存在的 DOM 节点。
 - **buffer 上限**：`MAX_STREAMING_BUFFER_LENGTH = 200`，避免极端情况下 buffer 无限累积。
+- **流式完成不重渲染**：保持 DOM 结构稳定，避免 complete 时的重排和闪烁。
 
 ## 测试计划
 
@@ -236,9 +240,9 @@ if (eventName === 'token') {
 | `第一段。\n\n第二段` | `第二段` | `[{html: '<p>第一段。</p>'}]` |
 | `1. 检查步骤2. 整流罩` | `2. 整流罩` | `[{html: '<ol><li>检查步骤</li></ol>'}]` |
 | ```` ```bash\necho\n``` ```` | `` | `[{html: '<pre><code...>'}]` |
-| `超过170字符且无边界的长文本...` | 最后部分 | 前 170 字符被强制按句末句号分割 |
-| `超过200字符且无句号的长文本...` | 最后部分 | 前 200 字符被硬切 |
+| `超过200字符且无边界的长文本...` | 最后部分 | 前 200 字符被硬切 |
 | `检查。2. 整流罩`（列表序号句号） | `检查。2. 整流罩` | `[]`（不在 `2.` 处误切）|
+| `**加粗文本** 普通文本` | 普通文本 | `[{html: '<p><strong>加粗文本</strong></p>'}]` |
 
 ### 手动验收场景
 
@@ -256,9 +260,13 @@ if (eventName === 'token') {
 
 4. **快速短回答**
    - 提问一个简单问题（2~3 句话）
-   - 期望：由于内容短，可能整个回答都在 streamingBuffer 中，complete 后一次性渲染
+   - 期望：由于内容短，可能整个回答都在 streamingBuffer 中，complete 后通过 `finalizeStreamingContent` 追加到 confirmedBlocks
 
-5. **与现有 Markdown 渲染的兼容性**
+5. **流式完成后无闪烁**
+   - 提问任意问题
+   - 期望：complete 瞬间没有 DOM 结构切换导致的闪烁，字体和段落间距保持一致
+
+6. **与现有 Markdown 渲染的兼容性**
    - 验证 XSS 过滤仍然生效
    - 验证代码高亮仍然生效
    - 验证表格仍然正确渲染
@@ -267,15 +275,16 @@ if (eventName === 'token') {
 
 | 风险 | 应对措施 |
 |------|---------|
-| 段落边界判断不准确 | 两段式阈值 + 200 字符兜底；代码块使用状态机判断 |
+| 段落边界判断不准确 | 只在明确 Markdown 块边界切分 + 200 字符兜底；代码块使用状态机判断 |
 | 已固化段落无法被修正 | 流式 LLM 通常是顺序生成，极少回头修改；出现问题可刷新页面 |
-| 列表序号中的句号被误切 | 正则表示 `(?<!\d)[。！？.!?]\s+(?![\d])` 排除序号场景 |
+| Inline Markdown 标记被切分 | 取消句末句号急切切分，避免切在 `**`、`*` 等标记中间 |
 | LLM 把标题和正文写在一行 | system prompt 禁止 `#` 标题，改用 `**加粗**` |
-| 组件复杂度上升 | 保留旧的 `v-html="renderedContent"` 路径作为 fallback，全局开关可一键切换 |
-| 样式过渡不自然 | CSS `margin-bottom` 确保已确认段落和纯文本段落视觉衔接 |
+| 组件复杂度上升 | 保留旧的 `v-html="renderedContent"` 路径作为 fallback |
+| 样式过渡不自然 | 流式完成后不重渲染，保持 DOM 结构稳定 |
+| 流式感变弱 | 长段落累积时间变长，但换来更稳定的渲染效果 |
 
 **回滚方案**：
-- 在 `ChatMessage.vue` 中保留 `isStreaming` 的原始逻辑路径
+- 在 `ChatMessage.vue` 中保留 `renderedContent` 兜底路径
 - 如果增量渲染有不可接受的 bug，可以在 `App.vue` 中设置一个全局配置 `useIncrementalRendering: false`，所有消息退化为 complete 后一次性渲染
 
 ## 实施步骤
@@ -285,17 +294,26 @@ if (eventName === 'token') {
 3. 修改 `ChatMessage.vue`：引入双 buffer 架构（`confirmedBlocks` + `streamingBuffer`）✅
 4. 新增 `frontend/src/utils/streamingMarkdownProcessor.js`：段落边界检测算法 ✅
 5. 修改 `ChatMessage.vue` 模板：支持 `v-for` 渲染已确认段落 + 纯文本累积 ✅
-6. 新增/扩展前端单元测试
-7. 启动前后端，执行 5 个手动验收场景
-8. 按 `CONTRIBUTING.md` 的素材级 commit 规范提交并推送
+6. **后续调整**：取消 170~200 句末句号急切切分，避免 Inline Markdown 被切分 ✅
+7. **后续调整**：流式完成后不重渲染，保持 DOM 结构稳定，解决闪烁问题 ✅
+8. 新增/扩展前端单元测试
+9. 启动前后端，执行手动验收场景
+10. 按 `CONTRIBUTING.md` 的素材级 commit 规范提交并推送
 
 ## 关键文件
 
-- `docs/ADR/ADR-006-incremental-markdown-rendering.md`（新建）
-- `docs/design/FEATURE-streaming-incremental-markdown.md`（新建）
-- `frontend/src/utils/streamingMarkdownProcessor.js`（新建）
+- `docs/ADR/ADR-006-incremental-markdown-rendering.md`
+- `docs/design/FEATURE-streaming-incremental-markdown.md`
+- `frontend/src/utils/streamingMarkdownProcessor.js`
 - `frontend/src/components/ChatMessage.vue`
 - `frontend/src/utils/markdownRenderer.test.js`
+
+## 历史变更记录
+
+| 时间 | 变更 | 原因 |
+|------|------|------|
+| 2026-06-12 | 取消 170~200 句末句号急切切分 | 避免切在 `**加粗**` 等 Inline Markdown 标记中间，导致星号残留和样式错乱 |
+| 2026-06-12 | 流式完成后不重渲染 | 避免 `isStreaming` 切换时的 DOM 结构替换，解决闪烁和样式突变问题 |
 
 ## 相关文档
 
