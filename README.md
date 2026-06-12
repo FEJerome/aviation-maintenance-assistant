@@ -15,6 +15,12 @@
 
 ## 📸 功能演示
 
+### 项目介绍模式
+
+首次进入自动弹出项目导览，方便非航空背景面试官快速理解项目背景、技术架构与核心难点。
+
+![项目介绍模式](docs/assets/screenshots/scenario1-guide.png)
+
 ### 初始界面
 
 ![初始界面](docs/assets/screenshots/scenario0-initial.png)
