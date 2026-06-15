@@ -18,7 +18,7 @@ deploy/ssl/
 *.pfx
 
 # 项目内部私人笔记（含个人隐私信息）
-backend/CLAUDE.md
+/CLAUDE.md
 
 # 兜底：防止在根目录误执行 Maven 时产生 target/
 target/
