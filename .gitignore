@@ -3,6 +3,20 @@
 *.log
 .vscode
 .env
+.env*
+!.env.example
+
+# 部署配置与证书（生产域名、SSL 私钥等敏感信息）
+deploy/
+deploy/ssl/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# 项目内部私人笔记（含个人隐私信息）
+backend/CLAUDE.md
 
 # 兜底：防止在根目录误执行 Maven 时产生 target/
 target/
