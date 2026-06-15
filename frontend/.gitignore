@@ -11,5 +11,4 @@ dist/
 *.local
 
 # IDE
-.vscode/
-.idea/
+# .vscode/ 与 .idea/ 已移至根目录 .gitignore 统一管理

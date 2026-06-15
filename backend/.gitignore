@@ -30,7 +30,7 @@ build/
 !**/src/test/**/build/
 
 ### VS Code ###
-.vscode/
+# .vscode/ 已移至根目录 .gitignore 统一管理
 
 ### ChromaDB ###
 chroma-data/

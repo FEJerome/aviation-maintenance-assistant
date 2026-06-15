@@ -1,12 +1,23 @@
-# 根目录通用忽略
+# OS
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
 *.log
-.vscode
-.env
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Environment
 .env*
 !.env.example
 
-# 生产部署配置（真实版本不跟踪，仅跟踪 .example 模板）
+# Production deployment（真实版本不跟踪，仅跟踪 .example 模板）
 docker-compose.prod.yml
 deploy/*
 !deploy/nginx.prod.conf.example
@@ -20,15 +31,5 @@ deploy/ssl/
 # 项目内部私人笔记（含个人隐私信息）
 /CLAUDE.md
 
-# 兜底：防止在根目录误执行 Maven 时产生 target/
-target/
-
-# 后端（通过 backend/.gitignore 处理）
-
-# 前端
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
-
-# 测试截图（报告正文保留，图片不入库）
+# Docs test screenshots（报告正文保留，图片不入库）
 docs/test-reports/*.png
