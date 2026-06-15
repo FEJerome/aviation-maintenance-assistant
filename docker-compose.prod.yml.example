@@ -1,0 +1,62 @@
+# 生产环境 Docker Compose 模板
+# 使用方法：
+# 1. 复制本文件为 docker-compose.prod.yml
+# 2. 准备 SSL 证书到 deploy/ssl/ 目录（例如 cert.crt 和 cert.key）
+# 3. 准备 deploy/nginx.prod.conf（可参考 deploy/nginx.prod.conf.example）
+# 4. 确保 .env 文件中包含 DEEPSEEK_API_KEY
+# 5. 执行：docker compose -f docker-compose.prod.yml up -d
+
+services:
+  chromadb:
+    image: chromadb/chroma:0.5.5
+    container_name: ama-chromadb
+    # 生产环境不对外暴露 8000 端口，仅后端容器可通过 Docker 内网访问
+    volumes:
+      - ./backend/chroma-data:/chroma/chroma
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - ama-network
+
+  backend:
+    image: ama-backend:1.0.0-20260612
+    container_name: ama-backend
+    # 不映射到主机端口，仅通过 Docker 内网被前端 Nginx 访问
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - LANGCHAIN4J_CHROMA_EMBEDDING_STORE_BASE_URL=http://chromadb:8000
+    volumes:
+      - ./backend/data:/app/data
+    depends_on:
+      chromadb:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ama-network
+
+  frontend:
+    image: ama-frontend:1.0.0-20260612
+    container_name: ama-frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # 覆盖默认 Nginx 配置为生产 HTTPS 配置
+      - ./deploy/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      # 挂载 SSL 证书（请替换为你自己的证书文件名）
+      - ./deploy/ssl/cert.crt:/etc/nginx/ssl/cert.crt:ro
+      - ./deploy/ssl/cert.key:/etc/nginx/ssl/cert.key:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - ama-network
+
+networks:
+  ama-network:
+    driver: bridge

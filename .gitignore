@@ -6,8 +6,10 @@
 .env*
 !.env.example
 
-# 部署配置与证书（生产域名、SSL 私钥等敏感信息）
-deploy/
+# 生产部署配置（真实版本不跟踪，仅跟踪 .example 模板）
+docker-compose.prod.yml
+deploy/*
+!deploy/nginx.prod.conf.example
 deploy/ssl/
 *.pem
 *.key
