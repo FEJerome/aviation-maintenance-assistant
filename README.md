@@ -1,243 +1,288 @@
-# ✈️ 机务维修知识助手（Aviation Maintenance Assistant）
+# ✈️ Aviation Maintenance Assistant (AMA)
 
-> 基于 **RAG + Agent** 技术的航空维修知识库智能问答系统。
-> 由一位拥有 4 年深航机务维修经验的工程师设计，解决维修手册查询效率低、易查错机型、易断章取义的痛点。
+> A **self-hostable vertical RAG toolkit** for maintenance-manual question answering, with a built-in **aviation maintenance reference implementation**.
+> Bring your own documents and a DeepSeek API key — self-host the application on your own machine or server.
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.14-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk)](https://adoptium.net/)
 [![Vue.js](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)](https://vuejs.org/)
 [![LangChain4j](https://img.shields.io/badge/LangChain4j-1.14.1-blue)](https://github.com/langchain4j/langchain4j)
-[![DeepSeek](https://img.shields.io/badge/LLM-DeepSeek-1E90FF)](https://www.deepseek.com/)
+[![LLM](https://img.shields.io/badge/LLM-OpenAI--compatible%20(default%3A%20DeepSeek)-1E90FF)](docs/CONFIGURATION.md)
 [![ChromaDB](https://img.shields.io/badge/VectorDB-ChromaDB-FF6600)](https://www.trychroma.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
----
-
-## 📸 功能演示
-
-### 项目介绍模式
-
-首次进入自动弹出项目导览，方便非航空背景面试官快速理解项目背景、技术架构与核心难点。
-
-![项目介绍模式](docs/assets/screenshots/scenario1-guide.png)
-
-### 初始界面
-
-空对话状态下，页面中央展示 4 个快捷体验气泡，覆盖发动机、起落架、结构修理、航线排故四类典型场景，点击即可一键发送问题。
-
-![初始界面](docs/assets/screenshots/scenario0-initial.png)
-
-### 场景一：正确机型匹配 + RAG 检索
-
-输入机型与发动机型号，系统自动验证匹配关系，检索维修手册并生成带引用来源的回答。
-
-![正确机型匹配](docs/assets/screenshots/scenario2-result.png)
-
-### 场景二：机型-发动机不匹配拦截
-
-当用户输入不匹配的机型组合时，**确定性代码层直接拦截**，不走 LLM，避免幻觉风险。
-
-![机型不匹配拦截](docs/assets/screenshots/scenario3-result.png)
-
-### 场景三：通用知识问答
-
-非关键系统问题直接走 RAG 检索，回答包含手册原文引用。
-
-![通用知识问答](docs/assets/screenshots/scenario4-result.png)
-
-### 场景四：多轮追问（会话续聊）
-
-已验证会话支持 `conversationId` 续聊，自动注入机型上下文，无需重复提供机型信息。
-
-![多轮追问](docs/assets/screenshots/scenario5-result.png)
-
-> 💡 **完整交互 GIF**（录制中）：从输入问题到获取带引用回答的完整流程。
+**[中文文档 (Chinese README)](README.zh-CN.md)**
 
 ---
 
-## 🚀 核心特性
+## What it is / What it is not
 
-| 特性 | 说明 |
-|------|------|
-| 🔍 **RAG 检索增强** | 基于 AMM 维修手册、FAA 法规等公开资料，检索相关片段后由 DeepSeek 生成回答，并标注来源 |
-| 🤖 **Agent 机型验证** | 对话前强制校验飞机型号与发动机型号匹配，不匹配即拦截 |
-| 🛡️ **确定性路由** | 发动机/飞控/起落架等关键系统走硬性代码路由，**不走 LLM 自路由**，杜绝概率性错误 |
-| 💬 **会话管理** | 内存会话存储，支持 `conversationId` 多轮续聊，已验证机型自动注入上下文 |
-| ⚡ **Java 21 虚拟线程** | 基于 Virtual Threads 实现高并发 IO 密集型服务，阻塞成本趋近于零 |
-| 🧠 **纯本地嵌入模型** | all-MiniLM-L6-v2 本地 ONNX 推理，零外部 Embedding API 依赖，20MB 轻量 |
-| 🛡️ **多层限流保护** | Bucket4j 令牌桶限流，默认 20 次/小时/IP；全局 DeepSeek 调用 500 次/天上限，防止 Token 被恶意刷光 |
-| 🔄 **优雅降级** | DeepSeek 异常时返回固定友好提示，避免前端空白或暴露内部错误 |
-| 🐳 **Docker 一键部署** | `docker compose up -d` 启动前端 + 后端 + ChromaDB |
-| 📘 **项目介绍模式** | 首次进入自动弹出项目导览，方便非航空背景面试官快速理解项目价值 |
+**What it is:**
+
+- A **self-hosted RAG toolkit**: you deploy it on your own infrastructure, ingest your own documents, and query them through a chat API or the bundled demo UI.
+- An **aviation maintenance reference implementation**: aircraft/engine model validation, deterministic routing for critical systems, and source-cited answers grounded in maintenance manuals.
+- An **OpenAI-compatible LLM integration**: the backend uses LangChain4j's OpenAI-compatible client, and the current code **defaults to DeepSeek** (`deepseek-chat`). Provider-neutral BYOK configuration for arbitrary compatible endpoints is a **planned target contract** — see [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+
+**What it is not:**
+
+- **Not a public hosted Q&A service.** There is no official online demo; you run your own instance.
+- **Not a substitute for official manuals (AMM/FIM/IPC).** The system only provides suggestions and source citations. Final maintenance decisions must always be made by qualified engineers against the authoritative manuals.
+- **Not a general-purpose chatbot.** It is optimized for grounded, document-cited Q&A over a controlled corpus.
+- **Not shipping with any real manuals.** Copyrighted documentation is never included. You bring your own legally obtained documents (see [Data Sources](#data-sources)).
+
+**Planned (target contracts, not yet available):**
+
+- **Read-only MCP server** — expose retrieval and validation as MCP tools. Contract: [docs/MCP.md](docs/MCP.md). Status: **planned**.
+- **Golden-set evaluation harness** — reproducible regression evaluation for retrieval and answer quality. Schema: [evals/aviation/golden-set.schema.json](evals/aviation/golden-set.schema.json). Status: **planned**; the item body is not yet authored.
+- **Markdown document ingestion** — the current ingestion controller accepts **PDF only**; Markdown end-to-end ingestion is **planned**. Synthetic samples are provided in [examples/quickstart/](examples/quickstart/) so you can preview the format today.
 
 ---
 
-## 🏗️ 技术架构
+## 📸 Screenshots
+
+> ⚠️ **Note: the bundled demo UI is currently in Chinese.** An English UI is on the roadmap; the backend API accepts text queries independently of the UI language.
+
+### Project guide mode
+
+A built-in project tour pops up on first visit, explaining the background, architecture, and core design decisions.
+
+![Project guide mode](docs/assets/screenshots/scenario1-guide.png)
+
+### Initial screen
+
+Four quick-start bubbles cover typical scenarios: engine, landing gear, structural repair, and line troubleshooting.
+
+![Initial screen](docs/assets/screenshots/scenario0-initial.png)
+
+### Scenario 1: Valid aircraft match + RAG retrieval
+
+The user provides an aircraft model and engine model; the system validates the combination, retrieves manual excerpts, and generates an answer with source citations.
+
+![Valid aircraft match](docs/assets/screenshots/scenario2-result.png)
+
+### Scenario 2: Aircraft–engine mismatch interception
+
+When the combination does not match, **deterministic code blocks the request** — the LLM is never called, so this validation step is not exposed to LLM hallucination.
+
+![Mismatch interception](docs/assets/screenshots/scenario3-result.png)
+
+### Scenario 3: General knowledge Q&A
+
+Non-critical questions go straight through RAG retrieval, with answers citing manual sources.
+
+![General knowledge Q&A](docs/assets/screenshots/scenario4-result.png)
+
+### Scenario 4: Multi-turn follow-up (session continuity)
+
+Validated sessions support `conversationId` follow-ups; the aircraft context is injected automatically.
+
+![Multi-turn follow-up](docs/assets/screenshots/scenario5-result.png)
+
+---
+
+## 🚀 Key Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔍 **RAG retrieval** | Retrieves relevant excerpts from your ingested corpus, then generates answers with source citations |
+| 🤖 **Agent-style model validation** | Forces aircraft/engine model validation before answering critical-system questions; mismatches are blocked |
+| 🛡️ **Deterministic routing** | Critical systems (engine, flight controls, landing gear, hydraulics) are routed by hard keyword rules — **no LLM self-routing**, no probabilistic errors on control flow |
+| 💬 **Session management** | In-memory session store with `conversationId` multi-turn continuity; validated aircraft context auto-injected |
+| ⚡ **Java 21 Virtual Threads** | Serves IO-intensive chat workloads on virtual threads, reducing the thread-cost of blocking LLM/DB calls compared to a fixed platform-thread pool |
+| 🧠 **Fully local embeddings** | all-MiniLM-L6-v2 ONNX inference (20MB), zero external embedding API calls |
+| 🛡️ **Multi-layer rate limiting** | Bucket4j token bucket (default 20 req/hour/IP) plus a global daily LLM quota (default 500 calls/day) |
+| 🔄 **Graceful degradation** | Returns a fixed friendly message on LLM failure instead of blank pages or stack traces |
+| 🐳 **Docker one-command deployment** | `docker compose up -d` starts frontend + backend + ChromaDB |
+
+---
+
+## 🏗️ Architecture
 
 ```mermaid
 flowchart LR
-    User["👤 用户"] -->|HTTP| Frontend["🖥️ Vue 3 + Vite\nlocalhost:5173"]
+    User["👤 User"] -->|HTTP| Frontend["🖥️ Vue 3 + Vite\nlocalhost:5173"]
     Frontend -->|/api/chat| Backend["⚙️ Spring Boot 3.5\nJava 21 Virtual Threads\nlocalhost:8080"]
-    Backend --> Router["🔀 TopicClassifier\n确定性关键词路由"]
-    Router -->|关键系统| Validation["🛡️ AircraftValidationService\n机型-发动机匹配验证"]
-    Router -->|通用问题| RAG["🔍 RAG Pipeline"]
-    Validation -->|验证通过| RAG
-    Validation -->|不匹配| Block["⛔ 拦截响应"]
-    RAG --> Chroma[("🗄️ ChromaDB\n向量检索\nlocalhost:8000")]
-    RAG --> Embed["📐 all-MiniLM-L6-v2\n本地 ONNX 嵌入"]
-    RAG --> LLM["🧠 DeepSeek\ndeepseek-chat\n生成回答"]
+    Backend --> Router["🔀 TopicClassifier\nDeterministic keyword routing"]
+    Router -->|Critical system| Validation["🛡️ AircraftValidationService\nAircraft-engine match validation"]
+    Router -->|General question| RAG["🔍 RAG Pipeline"]
+    Validation -->|Match| RAG
+    Validation -->|Mismatch| Block["⛔ Blocked response"]
+    RAG --> Chroma[("🗄️ ChromaDB\nVector search\nlocalhost:8000")]
+    RAG --> Embed["📐 all-MiniLM-L6-v2\nLocal ONNX embeddings"]
+    RAG --> LLM["🧠 OpenAI-compatible LLM\n(default: DeepSeek)\nAnswer generation"]
     Block --> Backend
     LLM --> Backend
     Backend --> Frontend
 ```
 
-### 请求生命周期（以"CTLS 发动机滑油压力"为例）
+### Request lifecycle (example: "CTLS engine oil pressure")
 
-1. **用户输入** → `POST /api/chat` → 后端接收 `ChatRequest`
-2. **路由分类** → `TopicClassifier` 识别"发动机"关键词 → 判定为关键系统
-3. **信息提取** → `AircraftInfoExtractor` 从 query 中提取机型（CTLS）和发动机（Rotax 912）
-4. **机型验证** → `AircraftValidationService` 查询硬编码匹配表 → **MATCH**
-5. **会话管理** → 生成 `conversationId`，保存验证状态到 `ChatSessionStore`
-6. **RAG 检索** → `TranslationQueryTransformer` 优化查询 → ChromaDB 向量检索 → 取 Top-5 片段
-7. **LLM 生成** → 将检索片段注入 Prompt → DeepSeek 生成带引用的回答
-8. **响应返回** → `ChatResponse`（reply + conversationId）→ 前端渲染
+1. **User input** → `POST /api/chat` → backend receives `ChatRequest`
+2. **Routing** → `TopicClassifier` detects the "engine" keyword → critical system
+3. **Extraction** → `AircraftInfoExtractor` parses aircraft (CTLS) and engine (Rotax 912) from the query
+4. **Validation** → `AircraftValidationService` checks the hardcoded match table → **MATCH**
+5. **Session** → generates `conversationId`, stores validation state in `ChatSessionStore`
+6. **RAG retrieval** → `TranslationQueryTransformer` optimizes the query → ChromaDB vector search → Top-5 excerpts
+7. **LLM generation** → retrieved excerpts are injected into the prompt → the OpenAI-compatible LLM (default DeepSeek) generates a cited answer
+8. **Response** → `ChatResponse` (reply + conversationId) → frontend rendering
 
 ---
 
-## ⚡ 快速开始
+## ⚡ Quick Start
 
-### 前置条件
+### Prerequisites
 
-- [Docker](https://www.docker.com/products/docker-desktop/)（用于 ChromaDB）
-- JDK 21（[Eclipse Temurin](https://adoptium.net/temurin/releases/?version=21)）
-- [Node.js 20+](https://nodejs.org/)（前端开发）
-- DeepSeek API Key（[获取地址](https://platform.deepseek.com/)）
+- [Docker](https://www.docker.com/products/docker-desktop/) (for ChromaDB)
+- JDK 21 ([Eclipse Temurin](https://adoptium.net/temurin/releases/?version=21))
+- [Node.js 20+](https://nodejs.org/) (frontend development)
+- An LLM API key — currently the default configuration expects a **DeepSeek** API key ([get one here](https://platform.deepseek.com/)). Arbitrary OpenAI-compatible endpoints are a **planned target contract** (see [docs/CONFIGURATION.md](docs/CONFIGURATION.md)).
 
-### 方式一：Docker Compose 一键启动（推荐）
+### Option 1: Docker Compose (recommended)
 
 ```bash
-# 1. Clone 仓库
+# 1. Clone the repository
 git clone https://github.com/fejerome/aviation-maintenance-assistant.git
 cd aviation-maintenance-assistant
 
-# 2. 配置环境变量
+# 2. Configure environment variables
 cp .env.example .env
-# 编辑 .env，填入你的 DEEPSEEK_API_KEY
+# Edit .env and fill in your DEEPSEEK_API_KEY
 
-# 3. 一键启动（前端 + 后端 + ChromaDB）
+# 3. Start everything (frontend + backend + ChromaDB)
 docker compose up -d
 ```
 
-访问前端：**http://localhost**
+Frontend: **http://localhost** — Backend API: **http://localhost:8080/api/chat**
 
-后端 API：**http://localhost:8080/api/chat**
+See [DEPLOY.md](DEPLOY.md) for details.
 
-详细部署文档见 [DEPLOY.md](DEPLOY.md)。
-
-### 方式二：手动启动（开发调试）
+### Option 2: Manual startup (development)
 
 ```bash
-# 1. 启动 ChromaDB
+# 1. Start ChromaDB
 docker run -d --name chromadb -p 8000:8000 \
   -v ./backend/chroma-data:/chroma/chroma \
   chromadb/chroma:0.5.5
 
-# 2. 启动后端（⚠️ 必须从 backend/ 目录内启动）
+# 2. Start the backend (⚠️ must run from inside backend/)
 cd backend
 export DEEPSEEK_API_KEY="sk-xxxxxxxx"
 ./mvnw spring-boot:run
 
-# 3. 启动前端
+# 3. Start the frontend
 cd ../frontend
 npm install
 npm run dev
 ```
 
-访问前端：**http://localhost:5173**
+Frontend: **http://localhost:5173** — Backend API: **http://localhost:8080/api/chat**
 
-后端 API：**http://localhost:8080/api/chat**
+### Ingest your documents
 
-> 📄 详细部署文档见 [DEPLOY.md](DEPLOY.md)。
+Place your legally obtained PDF manuals into `backend/data/`, then trigger ingestion. The endpoint has no built-in authentication; call it only from localhost or a trusted network, and restrict access at the reverse proxy when deployed:
+
+```bash
+curl -X POST http://localhost:8080/api/admin/ingest
+```
+
+Try the format-first quickstart corpus in [examples/quickstart/](examples/quickstart/) and the aviation capability notes in [examples/aviation/](examples/aviation/).
 
 ---
 
-## 📁 项目结构
+## 📁 Project Structure
 
 ```
 .
-├── backend/                 # Spring Boot 后端
-│   ├── src/main/java/.../   # Java 源码
-│   │   ├── chat/            # 聊天 API、路由、服务、会话
-│   │   ├── document/        # PDF 文档摄入
-│   │   ├── rag/             # RAG 组件（查询翻译器等）
-│   │   ├── validation/      # 机型验证服务
-│   │   └── config/          # LLM / ChromaDB 配置
-│   ├── data/                # PDF 源文档（gitignore）
-│   ├── chroma-data/         # ChromaDB 持久化数据（gitignore）
+├── backend/                 # Spring Boot backend
+│   ├── src/main/java/.../   # Java sources
+│   │   ├── chat/            # Chat API, routing, services, sessions
+│   │   ├── document/        # PDF document ingestion
+│   │   ├── rag/             # RAG components (query transformer, etc.)
+│   │   ├── validation/      # Aircraft model validation
+│   │   └── config/          # LLM / ChromaDB configuration
+│   ├── data/                # PDF source documents (gitignored — bring your own)
+│   ├── chroma-data/         # ChromaDB persistent data (gitignored)
 │   └── pom.xml
-├── frontend/                # Vue 3 前端
+├── frontend/                # Vue 3 frontend (demo UI, currently Chinese)
 │   ├── src/
-│   │   ├── App.vue          # 聊天主界面
-│   │   └── components/      # 聊天消息组件
-│   ├── Dockerfile           # 前端 Nginx 镜像
-│   ├── nginx.conf           # 前端 Nginx 反向代理配置
+│   │   ├── App.vue          # Chat main UI
+│   │   └── components/      # Chat message components
+│   ├── Dockerfile           # Frontend Nginx image
+│   ├── nginx.conf           # Frontend Nginx reverse proxy config
 │   └── package.json
-├── docs/                    # 项目文档
-│   ├── API.md               # 接口文档
-│   ├── ARCHITECTURE.md      # 架构说明
-│   ├── ADR/                 # 架构决策记录
-│   └── design/              # 功能设计文档
-├── docker-compose.yml       # Docker Compose 编排
-├── DEPLOY.md                # 部署指南
-├── LICENSE                  # MIT 许可证
-├── scripts/                 # 测试与工具脚本
-│   └── tests/               # 手动/半自动验收脚本
-│       ├── integration/     # 后端集成测试
-│       ├── e2e/             # 端到端测试
-│       └── docker/          # Docker 部署验证
-└── README.md                # 本文件
+├── docs/                    # Project documentation
+│   ├── API.md               # API reference
+│   ├── ARCHITECTURE.md      # Architecture deep-dive
+│   ├── CONFIGURATION.md     # BYOK configuration (target contract, planned)
+│   ├── MCP.md               # Read-only MCP tools (target contract, planned)
+│   ├── ADR/                 # Architecture Decision Records
+│   └── design/              # Feature design documents
+├── examples/                # Quickstart corpus & capability notes
+│   ├── quickstart/          # Synthetic sample documents + quickstart guide
+│   └── aviation/            # Aviation reference-implementation notes
+├── evals/                   # Evaluation assets
+│   └── aviation/            # Golden-set schema & evaluation guide (planned)
+├── docker-compose.yml       # Docker Compose orchestration
+├── DEPLOY.md                # Deployment guide
+├── LICENSE                  # MIT License
+├── scripts/                 # Test & utility scripts
+│   └── tests/               # Manual/semi-automated acceptance scripts
+└── README.md                # This file
 ```
 
 ---
 
-## 📚 数据来源
+## 📚 Data Sources
 
-本项目仅使用**公开、合法、无版权风险**的航空维修资料：
+This repository **does not ship any real manuals**. The aviation reference implementation was developed against **publicly accessible** materials (all rights remain with their respective holders):
 
-| 资料 | 类型 | 用途 |
-|------|------|------|
-| [FAA AC 65-9A](https://www.faa.gov/documentLibrary/media/Advisory_Circular/AC_65-9A.pdf) | 美国政府公开教材 | 机务基础知识库 |
-| [Flight Design CTLS AMM](http://flightdesignusa.com/support/resources) | 轻型飞机公开维修手册 | 具体维护程序演示 |
-| [Rotax 912 Line Maintenance](https://brp-rotax.com/) | 发动机维护手册 | 发动机系统演示 |
+| Source | Type | Use |
+|--------|------|-----|
+| [FAA AC 65-9A](https://www.faa.gov/documentLibrary/media/Advisory_Circular/AC_65-9A.pdf) | US government public textbook | General airframe & powerplant knowledge |
+| [Flight Design CTLS AMM](http://flightdesignusa.com/support/resources) | Publicly accessible light-sport aircraft manual | Concrete maintenance procedures |
+| [Rotax 912 Line Maintenance](https://brp-rotax.com/) | Engine maintenance manual | Engine system demonstration |
 
-> ⚠️ **严禁使用**波音/空客商用飞机的 AMM（受版权保护，需航空公司订阅）。
-
----
-
-## 🔗 在线演示
-
-🌐 **https://ama.pandazi.cn**（即将上线）
-
-> 当前阶段建议本地运行体验完整功能。部署到云服务器后更新此链接。
+> ⚠️ **Copyright note**: "publicly accessible" does **not** mean "cleared for redistribution". All rights in these documents remain with their respective holders, and the CTLS / Rotax materials are not known to carry an open redistribution license. This repository never distributes real manuals — before ingesting and using any document, you must confirm that you hold the appropriate rights or authorization.
+>
+> Commercial-aircraft AMMs (e.g. Boeing / Airbus) **must not be publicly distributed**; ingest and use them only when you have the appropriate authorization (for example through your organization's subscription).
+>
+> **Bring your own documents**: you are responsible for ensuring you have the legal right to ingest and query any document you place in `backend/data/`.
 
 ---
 
-## 📖 相关文档
+## 🗺️ Roadmap
 
-- [API 文档](docs/API.md) — 后端接口请求/响应示例
-- [架构说明](docs/ARCHITECTURE.md) — 模块职责与数据流详解
-- [架构决策记录](docs/ADR/) — 为什么选 LangChain4j、ChromaDB、DeepSeek
-- [部署指南](DEPLOY.md) — Docker Compose 部署与环境变量说明
-- [开发规范](docs/CONTRIBUTING.md) — 文档驱动开发流程与 Commit 规范
+| Item | Status | Notes |
+|------|--------|-------|
+| Self-hosted RAG toolkit + aviation reference implementation | ✅ Current | This repository |
+| BYOK: arbitrary OpenAI-compatible endpoint (base_url / api_key / model) | 🎯 Target contract | Contract: [docs/CONFIGURATION.md](docs/CONFIGURATION.md) |
+| Markdown document ingestion | 🎯 Target contract | Current: PDF only |
+| Read-only MCP server (`validate_aircraft_model`, `search_manual`, `get_manual_excerpt`) | 📋 Planned | Contract: [docs/MCP.md](docs/MCP.md) |
+| Golden-set evaluation harness (~20 aviation items) | 📋 Planned | Schema ready: [evals/aviation/](evals/aviation/); item body not yet authored |
+| English demo UI | 📋 Planned | Current UI is Chinese |
+
+---
+
+## 📖 Documentation
+
+- [API Reference](docs/API.md) — request/response examples
+- [Architecture](docs/ARCHITECTURE.md) — module responsibilities and data flow
+- [Configuration (target contract, planned)](docs/CONFIGURATION.md) — OpenAI-compatible BYOK, ChromaDB, rate limiting
+- [MCP Tools (target contract, planned)](docs/MCP.md) — read-only MCP interface
+- [ADRs](docs/ADR/) — why LangChain4j, ChromaDB, DeepSeek, and the self-hosted pivot
+- [Deployment Guide](DEPLOY.md) — Docker Compose deployment & environment variables
+- [Contributing](docs/CONTRIBUTING.md) — documentation-driven workflow & commit conventions
+
+---
+
+## 👤 About the Author
+
+Built by an engineer with **three and a half years** of frontline aircraft maintenance experience (Shenzhen Airlines) who later moved into Java backend development — designed by someone who has actually used maintenance manuals on the line, and knows where the real workflow breaks.
+
+Issues and pull requests are welcome.
 
 ---
 
 ## 📝 License
 
-本项目基于 [MIT License](LICENSE) 开源。
-
----
-
-> **项目定位**：Java + AI 交叉方向的求职作品，结合 4 年深航机务维修经验，构建垂类领域 Agent。
->
-> 如果你也是航空维修从业者或对 Java AI 应用感兴趣，欢迎 Star ⭐ 和交流！
+This project is open-sourced under the [MIT License](LICENSE).

@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/fejerome/aviation-maintenance-assistant/evals/aviation/golden-set.schema.json",
+  "title": "AMA Aviation Golden-Set Item",
+  "description": "Schema for one golden-set evaluation item for the Aviation Maintenance Assistant. The golden-set body (~20 items) is planned but not yet authored; this schema is the agreed contract. It can honestly express six case types: normal RAG answers, validation blocks, unknown combinations, clarification requests, no-answer cases, and out-of-scope cases. When answer_keypoints are present they must be paraphrased by the item author and must NOT contain verbatim manual text. Documents listed in required_docs are NOT shipped with the repository; users must obtain them legally themselves.",
+  "type": "object",
+  "required": [
+    "id",
+    "question",
+    "language",
+    "expected_route",
+    "tags"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^AVI-[0-9]{3}$",
+      "description": "Stable item identifier, e.g. AVI-001."
+    },
+    "question": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The user question, written by the item author (not quoted from any manual)."
+    },
+    "language": {
+      "type": "string",
+      "enum": ["en", "zh"],
+      "description": "Language of the question. For rag items the answer is expected in the same language."
+    },
+    "aircraft_model": {
+      "type": "string",
+      "description": "Optional aircraft model context (e.g. \"CTLS\") when the item targets the validation path. Omit for general-knowledge items."
+    },
+    "engine_model": {
+      "type": "string",
+      "description": "Optional engine model context (e.g. \"Rotax 912\"), paired with aircraft_model."
+    },
+    "expected_route": {
+      "type": "string",
+      "enum": [
+        "rag",
+        "validation_block",
+        "validation_unknown",
+        "clarify_model",
+        "no_answer",
+        "out_of_scope"
+      ],
+      "description": "Expected control-flow outcome: rag = normal retrieved answer; validation_block = deterministic mismatch interception; validation_unknown = combination not in the built-in table; clarify_model = system asks for aircraft/engine info; no_answer = the corpus legitimately contains no answer and the system must say so rather than fabricate; out_of_scope = the question is outside the toolkit's domain and must be declined."
+    },
+    "expected_behavior": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Checkable description of the expected behavior for non-rag routes (e.g. what a blocking, clarification, no-answer, or refusal response must convey). Recommended for every non-rag item; rag items may use it for additional constraints."
+    },
+    "answer_keypoints": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Paraphrased key points an acceptable answer must cover. MUST be written in the item author's own words and MUST NOT contain verbatim manual text. REQUIRED and non-empty when expected_route is \"rag\" (see the conditional rule below); may be omitted or empty for non-rag routes."
+    },
+    "source_locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["doc_title"],
+      "properties": {
+        "doc_title": {
+          "type": "string",
+          "description": "Title of the source document the item author used as evidence, e.g. \"FAA AC 65-9A\"."
+        },
+        "section_hint": {
+          "type": "string",
+          "description": "Optional human-oriented section hint (e.g. \"Chapter 7\"), used ONLY as manual evidence lookup aid. Automated evaluation MUST NOT assume this metadata exists in the vector store."
+        },
+        "page_hint": {
+          "type": ["integer", "string"],
+          "description": "Optional human-oriented page hint, same restriction as section_hint: manual evidence aid only, not usable by first-version automated evaluation."
+        }
+      },
+      "description": "Human evidence locator. REQUIRED when expected_route is \"rag\"; optional otherwise. First-version automated evaluation ignores section/page hints because ingestion does not guarantee page/section metadata."
+    },
+    "required_docs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Documents that must be present in the user's own corpus for this item to be evaluable. These documents are NOT distributed with the repository; each user must obtain them legally and ingest them independently. REQUIRED and non-empty when expected_route is \"rag\" (even no_answer items should list the corpus they were checked against where applicable); may be omitted or empty for routes that do not consult the corpus."
+    },
+    "tags": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "general-knowledge",
+          "engine",
+          "flight-controls",
+          "landing-gear",
+          "hydraulics",
+          "electrical",
+          "structures",
+          "validation",
+          "cross-language",
+          "citation",
+          "no-answer",
+          "ambiguous",
+          "out-of-scope"
+        ]
+      },
+      "description": "Classification tags for slicing evaluation results. Use no-answer / ambiguous / out-of-scope to make non-rag slices independently reportable."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional free-form note from the item author (e.g. known ambiguity, acceptable alternative answers)."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "expected_route": { "const": "rag" }
+        },
+        "required": ["expected_route"]
+      },
+      "then": {
+        "required": ["answer_keypoints", "source_locator", "required_docs"],
+        "properties": {
+          "answer_keypoints": { "minItems": 1 },
+          "required_docs": { "minItems": 1 }
+        }
+      }
+    }
+  ]
+}

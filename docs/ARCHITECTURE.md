@@ -1,6 +1,6 @@
 # 架构说明（ARCHITECTURE.md）
 
-> 本文档面向技术面试官和后续开发者，帮助你在 3 分钟内理解系统全貌。
+> 本文档帮助后续开发者与贡献者在 3 分钟内理解系统全貌。
 
 ---
 
@@ -175,9 +175,9 @@ flowchart TB
 | **Routing** | `AircraftInfoExtractor` | 从用户 query 中正则提取机型和发动机型号，支持厂商前缀剥离、子型号识别 | 纯文本处理，零外部调用 |
 | **Chat Service** | `MaintenanceChatService` | 核心 orchestrator：查会话 → 路由分类 → 提取验证 → RAG/阻断。流式场景下注册 `TokenStream` 回调，将 token 推入 `SseEmitter` | 所有控制流决策均为确定性代码，不感知流式/非流式的实现差异 |
 | **Chat Service** | `Assistant` | LangChain4j `@AiService` 声明式接口。非流式返回 `String`；流式返回 `TokenStream`。自动拼接 SystemMessage + 检索片段 + UserMessage | 框架自动生成实现类，开发者只写接口。返回类型决定内部调用 `ChatLanguageModel` 还是 `StreamingChatLanguageModel` |
-| **Session** | `ChatSessionStore` | 基于 `ConcurrentHashMap` 的内存 LRU 会话存储 | 演示版零部署依赖，生产版可替换为 Redis |
+| **Session** | `ChatSessionStore` | 基于 `ConcurrentHashMap` 的内存 LRU 会话存储 | 当前内存实现零部署依赖，生产环境可替换为 Redis |
 | **Session** | `SessionContext` | 会话状态：confirmedModel、confirmedEngine、validated | 验证通过后锁定机型上下文 |
-| **Document** | `DocumentIngestionController` | 触发 PDF 批量摄入 | 管理接口，演示版无鉴权 |
+| **Document** | `DocumentIngestionController` | 触发 PDF 批量摄入 | 管理接口，当前版本无内置鉴权，部署时须在反向代理层限制为内网可访问 |
 | **Document** | `DocumentIngestionService` | PDF → Tika 解析 → 文本分块 → 嵌入 → ChromaDB 存储 | LangChain4j 文档处理流水线 |
 | **RAG** | `TranslationQueryTransformer` | 在检索前优化/翻译用户查询，提升召回率 | 可选启用，通过 `application.yaml` 配置 |
 | **Validation** | `AircraftValidationService` | 硬编码 `Map<String, List<String>>` 机型-发动机匹配表 | 验证是硬性准入条件，**不是 @Tool**，不能由 LLM 决定是否执行 |
@@ -338,7 +338,7 @@ data: {"conversationId":"a1b2c3d4-e5f6-7890-abcd-ef1234567890"}
 
 ## 技术约束与边界
 
-### 当前实现的已知限制（演示版）
+### 当前实现的已知限制（当前版本）
 
 | 限制 | 说明 | 演进路径 |
 |------|------|---------|

@@ -1,0 +1,358 @@
+# 部署指南（DEPLOY.md · 中文版）
+
+> 本文档覆盖三种部署场景：本地开发、Docker Compose 一键启动、自托管服务器部署。
+>
+> **[English version](DEPLOY.md)**
+
+---
+
+## 目录
+
+- [前置条件](#前置条件)
+- [场景一：Docker Compose 一键启动（推荐）](#场景一docker-compose-一键启动推荐)
+- [场景二：手动启动（开发调试）](#场景二手动启动开发调试)
+- [场景三：自托管服务器部署](#场景三自托管服务器部署)
+- [环境变量说明](#环境变量说明)
+- [常见问题（FAQ）](#常见问题faq)
+
+---
+
+## 前置条件
+
+| 组件 | 版本 | 用途 | 获取地址 |
+|------|------|------|---------|
+| Docker | 最新版 | 运行 ChromaDB + 后端容器 | [Docker Desktop](https://www.docker.com/products/docker-desktop/) |
+| Docker Compose | v2+ | 编排多容器 | 随 Docker Desktop 附带 |
+| JDK 21 | Eclipse Temurin | 本地开发编译 | [Adoptium](https://adoptium.net/temurin/releases/?version=21) |
+| Node.js | 20+ | 前端开发 | [nodejs.org](https://nodejs.org/) |
+| DeepSeek API Key | — | LLM 调用（当前默认） | [platform.deepseek.com](https://platform.deepseek.com/) |
+
+> 🎯 **BYOK 说明**：接入任意 OpenAI 兼容端点（自定义 `base_url` / `api_key` / `model`）是**规划中的目标契约**——见 [docs/CONFIGURATION.zh-CN.md](docs/CONFIGURATION.zh-CN.md)。**当前代码尚不支持**，默认使用 DeepSeek。下文变量名反映当前实现。
+
+---
+
+## 场景一：Docker Compose 一键启动（推荐）
+
+适合：快速运行完整功能、本地验收测试、自托管服务器部署。
+
+### 1. Clone 仓库
+
+```bash
+git clone https://github.com/fejerome/aviation-maintenance-assistant.git
+cd aviation-maintenance-assistant
+```
+
+### 2. 配置环境变量
+
+```bash
+# 复制模板文件
+cp .env.example .env
+
+# 编辑 .env，填入你的 DeepSeek API Key
+# Windows: 用记事本/VS Code 打开 .env
+# macOS/Linux:
+echo "DEEPSEEK_API_KEY=sk-xxxxxxxx" > .env
+```
+
+> ⚠️ **安全提示**：`.env` 文件已被 `.gitignore` 保护，**不要**将其提交到 Git。
+
+### 3. 一键启动全部服务
+
+```bash
+docker compose up -d
+```
+
+首次构建会比较慢（需要下载 Maven 依赖、Node 依赖并打包），请耐心等待。后续启动秒级完成。
+
+验证服务状态：
+
+```bash
+# 查看容器状态
+docker compose ps
+
+# 查看后端日志（确认启动成功）
+docker compose logs -f backend
+
+# 查看 ChromaDB 健康状态
+curl http://localhost:8000/api/v1/heartbeat
+
+# 测试后端接口
+curl -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"What is AMM?"}'
+```
+
+### 4. 访问应用
+
+- 前端界面：**http://localhost**（或你的服务器地址）
+- 后端 API：**http://localhost:8080/api/chat**
+- ChromaDB：**http://localhost:8000**
+
+### 5. 文档摄入（仅限本机/内网）
+
+将合法获取的 PDF 手册放入 `backend/data/`，然后：
+
+```bash
+# 应仅从服务器本机执行；公网访问必须在反向代理层限制（见场景三）——
+# 当前版本该端点自身没有鉴权。
+curl -X POST http://localhost:8080/api/admin/ingest
+```
+
+### 6. 停止服务
+
+```bash
+# 停止并删除容器（数据保留在 volume 中）
+docker compose down
+
+# 彻底清理（包括 ChromaDB 持久化数据，谨慎使用）
+docker compose down -v
+```
+
+---
+
+## 场景二：手动启动（开发调试）
+
+适合：需要断点调试、修改后端代码后热重载、不打算使用 Docker 构建后端的场景。
+
+### 1. 启动 ChromaDB
+
+```bash
+docker run -d --name chromadb -p 8000:8000 \
+  -v ./backend/chroma-data:/chroma/chroma \
+  chromadb/chroma:0.5.5
+```
+
+### 2. 启动后端
+
+> ⚠️ **重要**：必须从 `backend/` 目录内启动，否则文档摄入的相对路径 `Paths.get("data")` 会失效。
+
+**macOS / Linux：**
+
+```bash
+cd backend
+export DEEPSEEK_API_KEY="sk-xxxxxxxx"
+./mvnw spring-boot:run
+```
+
+**Windows PowerShell：**
+
+```powershell
+cd backend
+$env:DEEPSEEK_API_KEY="sk-xxxxxxxx"
+.\mvnw.cmd spring-boot:run
+```
+
+**Windows CMD：**
+
+```cmd
+cd backend
+set DEEPSEEK_API_KEY=sk-xxxxxxxx
+mvnw.cmd spring-boot:run
+```
+
+### 3. 启动前端
+
+```bash
+cd ../frontend
+npm install
+npm run dev
+```
+
+访问地址：
+- 前端界面：**http://localhost:5173**
+- 后端 API：**http://localhost:8080/api/chat**
+
+> 注意：开发环境前端通过 Vite 代理 `/api` 到 `http://localhost:8080`，无需 Nginx rewrite。
+
+---
+
+## 场景三：自托管服务器部署
+
+适合：在云服务器或家庭/实验室服务器上运行你自己的实例，供自己或团队使用——**这是私有的自托管部署，不是公共演示服务**。
+
+### 架构建议
+
+```
+[你 / 你的团队] --HTTP/HTTPS--> [Nginx 反向代理] --/api/*--> [Spring Boot 后端 (:8080)]
+                                          |
+                                          +--/     --> [前端静态资源 (Nginx :80)]
+                                          +--内网  --> [ChromaDB (:8000，仅后端访问)]
+```
+
+### 部署步骤
+
+1. **准备服务器**（推荐配置：2C4G，CentOS/Ubuntu）
+2. **安装 Docker + Docker Compose**
+3. **Clone 仓库**并配置 `.env`
+4. **修改 `docker-compose.yml`**：
+   - 将 `backend` 服务的端口从 `"8080:8080"` 改为 `"127.0.0.1:8080:8080"`（仅本机访问）
+   - 将 `chromadb` 的端口映射删除（仅后端内网访问）
+   - 保留 `frontend` 服务对外暴露 80 端口
+5. **配置 Nginx**（示例——将 `ama.example.com` 替换为你自己的域名或 IP）：
+
+   ```nginx
+   server {
+       listen 80;
+       server_name ama.example.com;
+       return 301 https://$server_name$request_uri;
+   }
+
+   server {
+       listen 443 ssl;
+       server_name ama.example.com;
+
+       location / {
+           root /usr/share/nginx/html;
+           try_files $uri $uri/ /index.html;
+       }
+
+       location /api/ {
+           proxy_pass http://backend:8080/api/;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+       }
+   }
+   ```
+
+6. **限制 `/api/admin/ingest` 内网访问**（当前版本该端点没有内置鉴权——此限制为**必需**，非可选）：
+
+   ```nginx
+   location /api/admin/ingest {
+       allow 127.0.0.1;
+       allow 10.0.0.0/8;
+       allow 172.16.0.0/12;
+       allow 192.168.0.0/16;
+       deny all;
+       proxy_pass http://backend:8080/api/admin/ingest;
+   }
+   ```
+
+7. **启动服务**：`docker compose up -d`
+8. **配置 SSL**：使用 Certbot 申请 Let's Encrypt 证书
+
+> 💡 **简化方案**：如果服务器资源有限，也可以只部署后端 + ChromaDB，前端构建产物托管到任意静态托管服务。
+
+---
+
+## 环境变量说明
+
+| 变量名 | 必填 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `DEEPSEEK_API_KEY` | ✅ | — | DeepSeek API Key，用于 LLM 调用（当前默认提供方） |
+| `LANGCHAIN4J_OPEN_AI_CHAT_MODEL_API_KEY` | ❌ | `${DEEPSEEK_API_KEY}` | 显式指定 LLM API Key（一般不需要单独设置） |
+| `LANGCHAIN4J_CHROMA_EMBEDDING_STORE_BASE_URL` | ❌ | `http://localhost:8000` | ChromaDB 服务地址。Docker Compose 中自动覆盖为 `http://chromadb:8000` |
+| `SERVER_PORT` | ❌ | `8080` | 后端 HTTP 端口 |
+
+> 🎯 用于接入任意 OpenAI 兼容端点的其他变量（`base_url`、`model`）属于**规划中的目标契约**——见 [docs/CONFIGURATION.zh-CN.md](docs/CONFIGURATION.zh-CN.md)。当前代码尚未接入。
+
+---
+
+## 常见问题（FAQ）
+
+### Q1：`docker compose up` 后后端一直重启 / 报 `Connection refused` to ChromaDB
+
+**原因**：后端启动比 ChromaDB 快，此时 ChromaDB 还没准备好。
+
+**解决**：
+- `docker-compose.yml` 中已配置 `depends_on` + `condition: service_healthy`，确保 ChromaDB 健康后才启动后端。
+- 如果仍有问题，手动等待 10 秒后重启后端容器：
+  ```bash
+  docker compose restart backend
+  ```
+
+### Q2：Windows 下 Docker volume 挂载报错 `invalid mount config`
+
+**原因**：Windows 路径分隔符或权限问题。
+
+**解决**：
+- 确保在 **PowerShell** 或 **CMD** 中执行，不要使用 MSYS/Cygwin 等模拟环境。
+- 检查 `backend/chroma-data` 目录是否存在，如果不存在先手动创建：
+  ```powershell
+  New-Item -ItemType Directory -Force -Path backend\chroma-data
+  ```
+- 在 Docker Desktop → Settings → Resources → File Sharing 中确保项目目录已共享。
+
+### Q3：PDF 摄入后重启容器，向量数据丢失了
+
+**原因**：可能误删了 `backend/chroma-data` 目录，或没有正确挂载 volume。
+
+**解决**：
+- **不要手动删除 `backend/chroma-data/`**，这是 ChromaDB 的持久化数据目录。
+- 检查 `docker-compose.yml` 中 volume 挂载是否正确：
+  ```yaml
+  volumes:
+    - ./backend/chroma-data:/chroma/chroma
+  ```
+- 若数据已丢失，需重新执行 PDF 摄入（仅限本机/内网）：
+  ```bash
+  curl -X POST http://localhost:8080/api/admin/ingest
+  ```
+
+### Q4：`./mvnw spring-boot:run` 报 `JAVA_HOME` 错误 / 类文件版本不匹配
+
+**原因**：系统默认 JDK 不是 21。
+
+**解决**：
+- 确认 `java -version` 输出为 `openjdk version "21"`。
+- 如果不是，临时指定 JAVA_HOME：
+  ```bash
+  export JAVA_HOME=/path/to/jdk-21
+  export PATH=$JAVA_HOME/bin:$PATH
+  ```
+
+### Q5：前端访问后端报 CORS 错误
+
+**原因**：生产环境 Nginx 未正确代理 `/api` 请求。
+
+**解决**：
+- 确认 `docker-compose.yml` 中 `frontend` 服务已启动。
+- 确认 `frontend/nginx.conf` 中 `/api/` 的 `proxy_pass` 指向正确。
+- 开发环境：前端 `vite.config.js` 中已配置代理 `/api` 到 `http://localhost:8080`，请确保前端请求路径以 `/api` 开头。
+
+### Q6：如何确认 RAG 检索是否工作正常？
+
+```bash
+# 1. 先确保 PDF 已摄入（仅限本机/内网）
+curl -X POST http://localhost:8080/api/admin/ingest
+
+# 2. 测试一个通用知识问题
+curl -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is AMM?"}'
+```
+
+如果返回的回答中包含手册引用来源（如 `来源：... Page 36`），说明 RAG 链路正常工作。
+
+### Q7：接口返回 429 Too Many Requests
+
+**原因**：触发了限流保护：
+
+- IP 限流：默认 20 次/小时/IP。
+- 全局日限额：LLM 总调用次数达到 500 次/天。
+
+**解决**：
+
+- 如果是 IP 限流，等待 1 小时后重试。
+- 如果是全局日限额耗尽，需次日自动恢复；如需临时调整，修改 `DeepSeekQuotaService` 中的 `DAILY_LIMIT`。
+
+---
+
+## 部署后验证清单
+
+以下项目**无法**在本地开发环境完全模拟，必须在服务器 + Nginx 部署完成后验证：
+
+| 验证项 | 验证方式 | 预期结果 |
+|--------|---------|---------|
+| 真实 IP 限流 | 使用不同公网 IP 或代理访问 `/api/chat` | 每个 IP 独立计数，触发限流后返回 429 |
+| Nginx 层内网限制 | 从公网访问 `/api/admin/ingest` | Nginx 直接返回 403，请求不会到达后端 |
+| HTTPS 跳转 | 访问 `http://<你的域名>` | 自动 301 跳转到 `https://<你的域名>` |
+| 域名解析 | 通过域名访问前端与后端 | 全部正常 |
+| ChromaDB 不对外暴露 | 从外部访问 `http://<服务器IP>:8000` | 连接超时或拒绝 |
+| 安全组/防火墙 | 仅开放 80、443 端口 | 其他端口不可达 |
+
+> 💡 建议在首次部署时逐项勾选，完成后截图保存作为部署验收记录。
+
+---
+
+*[English version](DEPLOY.md) · 最后更新：2026-11-12（自托管定位调整）*
