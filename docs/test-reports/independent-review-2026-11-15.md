@@ -3,15 +3,13 @@
 > 复审：独立 reviewer（零上下文新眼，不采信实施结论）
 > 对象：本地提交 `e94f41579c9c7bbdc03c62d2f1936b9a51260f8c`（自托管底座），基线 `bc148f4`
 > 方法：全量 diff 审读（111 文件，+6821/−2018）＋ 独立复跑 ＋ loopback live 实测 ＋ 公开红线核查
-> 状态：复审前 HEAD=e94f415、工作树干净；复审后保持原样，未改任何产品代码与既有文档
+> 状态：链＝初审对象 `e94f415` → 初审报告 `400e762` → D1 返修 `5d6d2ea` → 本报告更新（复验收官）；全程未改任何产品代码
 
 ## 一、结论
 
-**有条件放行（1 项必修，纯文档补全；代码与测试全部独立复验通过）。**
+**PASS（无条件通过）。** 初审为有条件放行，唯一必修项 D1 已经返修并复验清零（见 §五）；代码与测试全部独立复验通过，公开红线零命中。
 
-必修项不影响已验证的运行行为，但位于文档权威层，应在合并前补齐：
-
-- **必修 D1：`docs/API.md` 与 `docs/API.zh-CN.md` 的 Errors 一节未收录协议级错误码。** 两版文档对 `404 NOT_FOUND`、`405 METHOD_NOT_ALLOWED`、`415 UNSUPPORTED_MEDIA_TYPE`、`500 INTERNAL_ERROR` 零提及（实测 grep 计数=0）。该节采用分状态码列举式写法且已含 400/403/429/502/503/504，读者会将其视为完整清单；本次提交的核心修复（405/415 语义码）恰恰未在其中登记。修复量小：两版各补 4 行（404/405/415/500）。
+- ~~必修 D1~~ → **已清零**：初审时 `docs/API.md` 与 `docs/API.zh-CN.md` 的 Errors 一节对 `404 NOT_FOUND`、`405 METHOD_NOT_ALLOWED`、`415 UNSUPPORTED_MEDIA_TYPE`、`500 INTERNAL_ERROR` 零提及（实测 grep 计数=0）；返修提交 `5d6d2ea` 在两版 Errors 节各补 4 行。
 
 ## 二、代码审查（diff 独立审读）
 
@@ -54,9 +52,11 @@
 
 ## 五、必修清单
 
-| # | 项 | 说明 |
+| # | 项 | 状态 |
 |---|---|---|
-| D1 | `docs/API.md`、`docs/API.zh-CN.md` Errors 节补 404/405/415/500 | 补 `NOT_FOUND`/`METHOD_NOT_ALLOWED`/`UNSUPPORTED_MEDIA_TYPE`/`INTERNAL_ERROR` 四码；其余已验行为无需改动 |
+| D1 | `docs/API.md`、`docs/API.zh-CN.md` Errors 节补 404/405/415/500 | **已修复并复验清零（2026-11-15）**：返修提交 `5d6d2ea`（"docs: complete API error response catalog"）仅触两文件、各 +4 行（404 `NOT_FOUND`／405 `METHOD_NOT_ALLOWED`／415 `UNSUPPORTED_MEDIA_TYPE`／500 `INTERNAL_ERROR`），中英双语语义码一致、排序正确，档实相符（与 `ApiExceptionHandler` 已验行为一致）；commit message 公开面干净；未触代码，初审已过的全量测试无需重跑 |
+
+**必修项余额：0。**
 
 ## 六、观察项（不阻塞，留档）
 
@@ -68,4 +68,5 @@
 
 - 18091 后端已停止（端口确认释放，curl 返回 000）；独立临时语料/state 目录已删除。
 - fake server（18089）与 Chroma 容器 `ama-chroma-test`（18090）按交接约定保留存活。
-- 工作树干净，HEAD 保持 `e94f415`；未 clean/reset/删 worktree、未改 main、未 merge、未 push。
+- 提交链：初审对象 `e94f415`（自托管底座）→ 初审报告 `400e762` → D1 返修 `5d6d2ea` → 本报告更新（复验收官，提交哈希以 git 记录为准，不在本文自指）。
+- 工作树干净；未 clean/reset/删 worktree、未改 main、未 merge、未 push。
