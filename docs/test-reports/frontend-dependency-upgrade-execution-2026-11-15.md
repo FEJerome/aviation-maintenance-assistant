@@ -1,7 +1,7 @@
 # 前端依赖升级执行报告 — 2026-11-15
 
 > **范围**：前端依赖安全升级，按预研方案 `docs/test-reports/frontend-dependency-upgrade-plan-2026-11-15.md` 执行
-> **基线**：73e590d（worktree 分支 `ama-002-dependency-upgrades`）
+> **基线**：73e590d（基于该提交的独立开发分支）
 > **执行序**：A（运行时）→ B（构建链 minor）→ D（测试树）→ C（构建链 major，Vite 7.3.8 路线）
 > **总结果**：`npm audit` 由 11 项（1 critical + 7 high + 3 moderate）降为 **0 项**；测试 43/43 全程通过；生产构建与开发服务器冒烟均通过
 > **声明**：本次未修改任何业务源码、视觉呈现与文档（本报告除外）；未触真实云端/本地大模型；全部验证为 loopback。
@@ -84,7 +84,7 @@ JS 较基线 +8.29 kB（+4.5%），来源为 dompurify/vue 安全补丁本体及
 5. **jsdom 29 未升级**：undici 修复在其区间内完成，jsdom 29→31 无安全必要性，不主动扩大；未来若升级，undici 8 的 advisory 状态需重新核查。
 6. **目标版本再被点名的固有风险**：执行末期复查时 nine 个目标版本仍均为各自修复线，但 advisory 随时可能更新；后续常规复测以 `npm audit` 实测为准。
 
-## 六、commit 清单（分支 `ama-002-dependency-upgrades`，未 push）
+## 六、commit 清单（基于提交 73e590d 的独立开发分支，未 push）
 
 | commit | 内容 |
 |---|---|
