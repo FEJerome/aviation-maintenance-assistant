@@ -1,0 +1,24 @@
+{
+  "scenario": "clarification",
+  "viewport": "1440x900",
+  "screenshot": "foundation-01-clarification.png",
+  "fakeAttempts": 3,
+  "state": {
+    "citations": 0,
+    "degraded": false,
+    "error": "",
+    "systemText": [
+      "为了提供准确的维修信息，请提供机型和发动机型号。"
+    ],
+    "horizontalOverflow": false
+  },
+  "exceptions": [],
+  "networkFailures": [
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED"
+  ]
+}

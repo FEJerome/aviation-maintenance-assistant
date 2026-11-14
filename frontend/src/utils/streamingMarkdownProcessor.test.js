@@ -62,14 +62,11 @@ describe('findParagraphBoundary', () => {
     expect(findParagraphBoundary(text)).toBe(-1)
   })
 
-  it('triggers sentence split between 170 and 200 chars', () => {
+  it('does not split at a sentence boundary below the hard limit', () => {
     const prefix = 'a'.repeat(170)
     const text = prefix + '检查。' + 'b'.repeat(10)
     expect(text.length).toBe(183)
-    const boundary = findParagraphBoundary(text)
-    expect(boundary).toBeGreaterThan(0)
-    expect(boundary).toBeLessThan(text.length)
-    expect(text.slice(0, boundary).trim()).toBe(prefix + '检查。')
+    expect(findParagraphBoundary(text)).toBe(-1)
   })
 
   it('forces hard split at 200 chars when no sentence end', () => {

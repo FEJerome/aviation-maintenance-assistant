@@ -1,5 +1,7 @@
 # 功能设计：请求限流
 
+> **Superseded:** 当前限流/配额按通用模型 attempt 计数并可显式关闭，默认不信任 forwarded headers，见 [ADR-008](../ADR/ADR-008-self-hosted-foundation.md)。
+
 ## 背景
 
 后端 `/api/chat` 和 `/api/chat/stream` 接口直接调用 DeepSeek API。如果接口无限制地被访问，可能产生以下风险：

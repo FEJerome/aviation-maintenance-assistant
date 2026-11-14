@@ -41,10 +41,20 @@
         :role="msg.role"
         :content="msg.content"
         :is-streaming="msg.isStreaming && useIncrementalRendering"
+        :citations="msg.citations"
+        :degraded="msg.degraded"
+        :degradation-reason="msg.degradationReason"
+        :outcome="msg.outcome"
+        :error-message="msg.errorMessage"
+        :trace-id="msg.traceId"
       />
       <div v-if="loading" class="loading-indicator">
         <span>正在生成...</span>
       </div>
+    </div>
+
+    <div class="data-notice">
+      使用云端模型时，问题和检索片段会发送给已配置的供应商。
     </div>
 
     <div class="chat-input-area">
@@ -69,6 +79,7 @@
 import { ref, nextTick, watch } from 'vue'
 import ChatMessage from './components/ChatMessage.vue'
 import ProjectGuide from './components/ProjectGuide.vue'
+import { createSseParser } from './utils/sseParser.js'
 
 const messages = ref([])
 const inputText = ref('')
@@ -81,12 +92,11 @@ const showGuide = ref(false)
 
 const suggestedQuestions = [
   'CTLS 飞机 Rotax 912 发动机滑油压力标准值是多少？',
-  'WT9 飞机起落架收放系统的日常检查要求是什么？',
+  'WT9 飞机 Rotax 912 起落架收放系统的日常检查要求是什么？',
   '飞机结构修理中，铆接修理的一般规范有哪些？',
-  'B737-800 发动机滑油压力低，应该如何排故？'
+  'B737-800 CFM56-7B 发动机滑油压力低，应该如何排故？'
 ]
 
-// 空对话时自动显示项目介绍弹出层
 watch(messages, (newVal) => {
   if (newVal.length === 0) {
     showGuide.value = true
@@ -98,6 +108,18 @@ function sendSuggestedQuestion(question) {
   sendMessage()
 }
 
+function findMessage(id) {
+  return messages.value.find(message => message.id === id)
+}
+
+function parsePayload(data) {
+  try {
+    return JSON.parse(data)
+  } catch {
+    throw new Error('服务端返回了无法解析的事件数据')
+  }
+}
+
 async function sendMessage() {
   const text = inputText.value.trim()
   if (!text || loading.value) return
@@ -107,9 +129,29 @@ async function sendMessage() {
   loading.value = true
   scrollToBottom()
 
-  // 预占一个系统消息位，用于流式填充
   const systemMsgId = Date.now() + 1
-  messages.value.push({ id: systemMsgId, role: 'system', content: '', isStreaming: true })
+  messages.value.push({
+    id: systemMsgId,
+    role: 'system',
+    content: '',
+    isStreaming: true,
+    citations: [],
+    degraded: false,
+    outcome: null,
+    errorMessage: '',
+    traceId: ''
+  })
+
+  let terminal = false
+
+  function fail(message) {
+    const msg = findMessage(systemMsgId)
+    if (msg) {
+      msg.isStreaming = false
+      msg.errorMessage = message
+    }
+    terminal = true
+  }
 
   try {
     const response = await fetch('/api/chat/stream', {
@@ -122,84 +164,69 @@ async function sendMessage() {
     })
 
     if (!response.ok) {
-      const errData = await response.json().catch(() => ({}))
-      throw new Error(errData.error || errData.message || `HTTP ${response.status}`)
+      const payload = await response.json().catch(() => ({}))
+      fail(payload.message || `请求失败（HTTP ${response.status}）`)
+      return
     }
 
     const reader = response.body.getReader()
     const decoder = new TextDecoder('utf-8')
-    let buffer = ''
+    const parser = createSseParser(({ event, data }) => {
+      if (terminal) return
+      const msg = findMessage(systemMsgId)
+      if (!msg) return
 
-    while (true) {
+      if (event === 'token') {
+        msg.content += data
+        scrollToBottom()
+        return
+      }
+
+      if (event === 'complete') {
+        const payload = parsePayload(data)
+        conversationId.value = payload.conversationId || conversationId.value
+        msg.citations = Array.isArray(payload.citations) ? payload.citations : []
+        msg.degraded = payload.degraded === true
+        msg.degradationReason = payload.degradationReason || ''
+        msg.outcome = payload.outcome || ''
+        msg.traceId = payload.traceId || ''
+        msg.isStreaming = false
+        terminal = true
+        return
+      }
+
+      if (event === 'error') {
+        const payload = parsePayload(data)
+        msg.traceId = payload.traceId || ''
+        fail(payload.message || '请求失败')
+      }
+    })
+
+    while (!terminal) {
       const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-
-      // SSE 格式解析：每个事件以 \n\n 结尾
-      const events = buffer.split('\n\n')
-      // 最后一段可能不完整，保留到下一次读取
-      buffer = events.pop() || ''
-
-      for (const eventBlock of events) {
-        if (!eventBlock.trim()) continue
-
-        const lines = eventBlock.split('\n')
-        let eventName = ''
-        let eventData = ''
-
-        for (const line of lines) {
-          if (line.startsWith('event:')) {
-            eventName = line.substring(6).trim()
-          } else if (line.startsWith('data:')) {
-            eventData = line.substring(5).trim()
-          }
+      if (done) {
+        parser.push(decoder.decode())
+        parser.flush()
+        if (!terminal) {
+          fail('响应在完成事件到达前中断')
         }
+        break
+      }
 
-        if (!eventName) continue
-
-        if (eventName === 'token') {
-          const msg = messages.value.find(m => m.id === systemMsgId)
-          if (msg) msg.content += eventData
-          scrollToBottom()
-        } else if (eventName === 'complete') {
-          const msg = messages.value.find(m => m.id === systemMsgId)
-          if (msg) msg.isStreaming = false
-          try {
-            const payload = JSON.parse(eventData)
-            if (payload.conversationId) {
-              conversationId.value = payload.conversationId
-            }
-          } catch (e) {
-            // ignore parse error
-          }
-        } else if (eventName === 'error') {
-          const msg = messages.value.find(m => m.id === systemMsgId)
-          if (msg) {
-            msg.content = '请求失败：' + eventData
-            msg.isStreaming = false
-          }
-        }
+      parser.push(decoder.decode(value, { stream: true }))
+      if (terminal) {
+        await reader.cancel()
       }
     }
   } catch (error) {
-    const msg = messages.value.find(m => m.id === systemMsgId)
-    if (msg) {
-      msg.content = '请求失败：' + error.message
-      msg.isStreaming = false
-    } else {
-      messages.value.push({
-        id: Date.now(),
-        role: 'system',
-        content: '请求失败：' + error.message,
-        isStreaming: false
-      })
-    }
+    fail(error.message || '请求失败')
   } finally {
-    // 兜底：如果流结束但消息仍处于流式状态，标记为完成
-    const msg = messages.value.find(m => m.id === systemMsgId)
+    const msg = findMessage(systemMsgId)
     if (msg && msg.isStreaming) {
       msg.isStreaming = false
+      if (!terminal) {
+        msg.errorMessage = '响应在完成事件到达前中断'
+      }
     }
     loading.value = false
     scrollToBottom()
@@ -315,6 +342,14 @@ function scrollToBottom() {
   color: #999;
   font-size: 13px;
   margin-top: 10px;
+}
+
+.data-notice {
+  padding: 8px 20px;
+  border-top: 1px solid #eee;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .chat-input-area {

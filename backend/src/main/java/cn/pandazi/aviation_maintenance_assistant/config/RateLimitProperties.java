@@ -1,25 +1,30 @@
 package cn.pandazi.aviation_maintenance_assistant.config;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-/**
- * 限流配置属性
- */
+import java.time.Duration;
+
 @Component
 @ConfigurationProperties(prefix = "rate-limit.chat")
 public class RateLimitProperties {
 
-    /**
-     * 每个 IP 在 refill-period 内的最大请求次数
-     */
     private long capacity = 20;
-
-    /**
-     * 令牌桶重置周期，支持 ISO-8601 持续时间简写：
-     * 例如 1h、10s、30m
-     */
     private String refillPeriod = "1h";
+    private boolean enabled = true;
+    private boolean trustProxyHeaders = false;
+
+    @PostConstruct
+    public void validate() {
+        if (capacity <= 0) {
+            throw new IllegalArgumentException("Rate-limit capacity must be positive");
+        }
+        Duration period = Duration.parse("PT" + refillPeriod.toUpperCase());
+        if (period.isZero() || period.isNegative()) {
+            throw new IllegalArgumentException("Rate-limit refill period must be positive");
+        }
+    }
 
     public long getCapacity() {
         return capacity;
@@ -35,5 +40,21 @@ public class RateLimitProperties {
 
     public void setRefillPeriod(String refillPeriod) {
         this.refillPeriod = refillPeriod;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public boolean isTrustProxyHeaders() {
+        return trustProxyHeaders;
+    }
+
+    public void setTrustProxyHeaders(boolean trustProxyHeaders) {
+        this.trustProxyHeaders = trustProxyHeaders;
     }
 }

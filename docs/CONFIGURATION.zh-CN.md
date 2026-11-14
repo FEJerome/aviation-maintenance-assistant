@@ -1,60 +1,58 @@
-# 配置（目标契约）
+# 配置说明
 
-> 🎯 **目标契约——尚未实现。**
-> 本文档是自托管工具包的**目标配置契约**，实现状态为**规划中（尚未落地）**。
-> **当前代码默认使用 DeepSeek**，通过 `langchain4j-open-ai` 接入，环境变量以 [DEPLOY.zh-CN.md](../DEPLOY.zh-CN.md) 中记录的为准。本页内容尚未接入运行中的系统。
->
-> **[English version](CONFIGURATION.md)**
+[English](CONFIGURATION.md)
 
----
+## 运行模式与模型连接
 
-## 1. 目标
+| 环境变量 | 默认值 | 契约 |
+|---|---|---|
+| `AMA_RUNTIME_MODE` | `cloud-allowed` | 可选 `cloud-allowed` 或 `local-only`。 |
+| `AMA_LLM_BASE_URL` | 无 | OpenAI 兼容根地址；只去尾部 `/`，不自动补 `/v1`。 |
+| `AMA_LLM_API_KEY` | 无 | 云模式必填，本地模式可选，只发往配置的端点。 |
+| `AMA_LLM_MODEL` | 无 | 必填，不静默选择供应商默认模型。 |
+| `AMA_LLM_TIMEOUT_SECONDS` | `60` | 阻塞与流式客户端共用的正数超时。 |
+| `AMA_LLM_STREAMING_ENABLED` | `true` | 为 `false` 时 SSE 只调用一次 blocking，并标记降级。 |
+| `AMA_LLM_TEMPERATURE` | 不发送 | 通用模式未配置时不发送；DeepSeek 旧配置兼容为 `0.2`。 |
 
-让每位自托管用户都能把后端指向**任意 OpenAI 兼容的聊天补全端点**——自己的提供方、自己的密钥、自己的模型——无需修改代码。
+云模式下三个连接变量必须完整配置。任一存在即选择通用模式，缺项会失败，绝不用 DeepSeek 值补齐，因此 YAML/Compose 不得放空占位。`LANGCHAIN4J_OPEN_AI_CHAT_MODEL_API_KEY` 不作为 key 来源。
 
-## 2. LLM 连接（OpenAI 兼容）
+迁移期仅配置 `DEEPSEEK_API_KEY` 时，在云模式使用 `https://api.deepseek.com/v1`、`deepseek-chat`、`0.2`；local-only 下拒绝该云回落。
 
-| 规划变量 | 必填 | 默认值（目标） | 说明 |
-|---------|------|---------------|------|
-| `AMA_LLM_BASE_URL` | ✅ | — | 任意 OpenAI 兼容端点的 Base URL，如 `https://api.deepseek.com`、`https://api.openai.com/v1`，或自托管 vLLM/Ollama 网关 |
-| `AMA_LLM_API_KEY` | ✅ | — | 上述端点的 API Key |
-| `AMA_LLM_MODEL` | ✅ | `deepseek-chat` | 端点所要求的聊天模型名称 |
-| `AMA_LLM_TIMEOUT_SECONDS` | ❌ | `60` | LLM 调用的单次请求超时 |
+## local-only 防护
 
-**当前实现映射（事实，非契约）：**
+允许 loopback、RFC1918 私网、IPv6 ULA，以及全部解析地址都属于这些范围的 Docker 服务名；拒绝公共地址、解析失败、unspecified、multicast 和 link-local。`localhost` 不绕过检查。云模式下非本地 LLM 必须 HTTPS，本地 HTTP 可用。
 
-- 当前后端读取 `DEEPSEEK_API_KEY`（可用 `LANGCHAIN4J_OPEN_AI_CHAT_MODEL_API_KEY` 覆盖），并在代码级配置中对接 DeepSeek 端点。
-- 规划实现会将上述配置归一到 `AMA_LLM_*` 契约，同时保留 DeepSeek 作为 `AMA_LLM_MODEL` 的默认值，通过兼容映射让现有 `.env` 文件继续可用。
+该功能只是配置防误连，不是操作系统网络沙箱；需要更强隔离时仍须配置防火墙或容器出网规则。
 
-## 3. ChromaDB（向量存储）
+本地 MiniLM 只表示向量化在本地，不等于完整链路本地。使用云 LLM 时，原始问题、已验证机型上下文、翻译查询和检索手册片段可能发给供应商。
 
-| 规划变量 | 必填 | 默认值 | 说明 |
-|---------|------|--------|------|
-| `AMA_CHROMA_BASE_URL` | ❌ | `http://localhost:8000` | ChromaDB 服务地址。Docker Compose 内部自动覆盖为 `http://chromadb:8000` |
-| `AMA_CHROMA_COLLECTION` | ❌ | `aviation-docs` | 摄入语料所用的集合名 |
-| `AMA_CHROMA_DATA_PATH` | ❌ | `./backend/chroma-data` | 挂载为 ChromaDB 持久化卷的主机路径 |
+## 语料与状态
 
-**当前实现映射（事实）：** 当前仅 `LANGCHAIN4J_CHROMA_EMBEDDING_STORE_BASE_URL` 生效；集合名与数据路径如上固定。
+| 环境变量 | 默认值 | 契约 |
+|---|---|---|
+| `AMA_CHROMA_BASE_URL` | `http://localhost:8000` | Compose 覆盖为 `http://chromadb:8000`。 |
+| `AMA_CHROMA_COLLECTION` | `aviation-docs` | 完整语料快照使用新 collection。 |
+| `AMA_CHROMA_DATA_PATH` | `./backend/chroma-data` | 仅用于 Compose 宿主机 volume 插值。 |
+| `AMA_DATA_PATH` | `./data` | 当前层 PDF/Markdown 目录，Compose 只读挂载。 |
+| `AMA_STATE_PATH` | `./state` | 可写配额状态目录。 |
+| `AMA_RAG_MAX_RESULTS` | `5` | 检索结果上限。 |
+| `AMA_RAG_MIN_SCORE` | `0.6` | 检索分数门槛。 |
+| `AMA_AVIATION_QUERY_TRANSLATION_ENABLED` | `true` | 中文翻译复用 executor，并遵守同一 local-only 端点约束。 |
 
-## 4. 限流（可选）
+`document_id` 来自原始字节 SHA-256；`excerpt_id` 来自 `document_id`、`recursive-500-50-v1`、chunk 序号和精确文本。重复摄入清理并重写同版本；改字节生成新版本且不删除旧版本。缺少这些 metadata 的旧向量必须摄入到新 collection。
 
-| 规划变量 | 必填 | 默认值 | 说明 |
-|---------|------|--------|------|
-| `AMA_RATE_LIMIT_PER_IP_PER_HOUR` | ❌ | `20` | 每 IP 每小时聊天请求上限（Bucket4j 令牌桶） |
-| `AMA_LLM_DAILY_QUOTA` | ❌ | `500` | LLM 调用全局每日上限，保护用户的 API 预算 |
+配额文件为 `AMA_STATE_PATH/daily-llm-quota.json`，按 UTC 日期和单进程原子预留计数。旧 `data/daily-llm-quota.json` 不自动继承；应停止写入后核对 `date/count` 并人工迁移，或采用保守的新日限额。
 
-**当前实现映射（事实）：** 两项限额当前以硬编码默认值存在（20 次/小时/IP，500 次/天全局）。规划实现将使其无需改代码即可配置。
+## 限流、配额与代理
 
-## 5. 嵌入模型（固定的设计决策）
+| 环境变量 | 默认值 | 契约 |
+|---|---|---|
+| `AMA_RATE_LIMIT_ENABLED` | `true` | 显式关闭后完全绕过 IP bucket。 |
+| `AMA_RATE_LIMIT_PER_IP_PER_HOUR` | `20` | 每 IP 正数请求容量。 |
+| `AMA_LLM_QUOTA_ENABLED` | `true` | 关闭后不读写配额状态。 |
+| `AMA_LLM_DAILY_QUOTA` | `500` | 按真实模型 attempt 计数，含翻译和失败调用。 |
+| `AMA_TRUST_PROXY_HEADERS` | `false` | 仅在受控代理且 backend 不可直连时启用。 |
 
-嵌入**刻意不纳入 BYOK 契约**：工具包使用完全本地的模型（all-MiniLM-L6-v2，ONNX 运行时，约 20MB），保证文档内容在向量化环节不离开用户机器。现在和规划中都不需要任何 Embedding API Key。
+阻塞与流式生成共用 executor。blocking client 设置 `maxRetries(0)`；当前 streaming 实现没有重试包装，fake 端点测试断言失败时只请求一次。流式失败后不会自动改用 blocking，也不会切换 provider、model 或 URL。
 
-## 6. 目标契约明确不做的事
-
-- 不做多租户密钥管理或按用户密钥库——部署按设计为单租户。
-- 不改流式协议：SSE 行为保持 [docs/API.md](API.md) 中的文档约定。
-- 不把默认向量存储从 ChromaDB 换掉（见 [ADR-002](ADR/ADR-002-chromadb-over-others.md)）。
-
----
-
-*[English version](CONFIGURATION.md) · 状态：目标契约（规划中）*
+MCP 工具、golden-set 执行器和可下载的完整持久化 trace 仍为规划能力。

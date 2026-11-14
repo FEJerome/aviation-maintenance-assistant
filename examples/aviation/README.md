@@ -18,6 +18,7 @@ This note describes what the **aviation maintenance reference implementation** i
   - **MISMATCH** → the request is blocked by code; the LLM is never called.
   - **UNKNOWN** → the user is told the combination is not in the built-in table.
 - Design principle: hard constraints live in deterministic code; only open-ended generation is delegated to the probabilistic model.
+- No engine is inferred from the aircraft model. Every turn is routed again; a newly supplied model or engine is combined with the other validated session value and revalidated. A failed new combination never overwrites the previous session.
 
 ### Capability 2: Cross-language retrieval
 
@@ -27,15 +28,16 @@ This note describes what the **aviation maintenance reference implementation** i
 
 ### Capability 3: Manual source locating
 
-- Answers generated through the RAG pipeline carry **source citations** (document name and locator information as available, e.g. page numbers when present in the ingested text).
+- Answers carry structured **retrieval citations**: document name, stable document/excerpt IDs, chunk index, and score. Page and chapter metadata are not guaranteed.
+- Citations show which chunks were supplied to the model; they are not sentence-level proof or maintenance authorization.
 - The system is designed to cite, not to replace: final maintenance decisions must always be made by qualified engineers against the authoritative manuals (AMM/FIM/IPC) and applicable regulations.
 
 ### What you need to bring
 
 | Item | Why |
 |------|-----|
-| Legally obtained manuals (PDF, current version) | Nothing is shipped; you ingest your own corpus into ChromaDB |
-| An OpenAI-compatible LLM API key | Current code defaults to DeepSeek; arbitrary endpoints are a planned target contract ([docs/CONFIGURATION.md](../../docs/CONFIGURATION.md)) |
+| Legally obtained manuals (PDF or Markdown, current version) | Nothing is shipped; you ingest your own corpus into ChromaDB |
+| An OpenAI-compatible endpoint and optional/required key | Generic `AMA_LLM_*` and limited DeepSeek migration are supported ([docs/CONFIGURATION.md](../../docs/CONFIGURATION.md)) |
 
 ---
 
@@ -53,6 +55,7 @@ This note describes what the **aviation maintenance reference implementation** i
   - **MISMATCH（不匹配）** → 代码层直接拦截，不调用 LLM。
   - **UNKNOWN（未知）** → 告知用户该组合未收录于内置表。
 - 设计原则：硬性约束由确定性代码承担，只有开放式生成才交给概率模型。
+- 不根据机型猜发动机。每轮重新路由；出现新机型或发动机时，与另一方已验证会话值组合后重新校验，新组合失败不会覆盖旧会话。
 
 ### 能力二：跨语言检索
 
@@ -62,12 +65,13 @@ This note describes what the **aviation maintenance reference implementation** i
 
 ### 能力三：手册来源定位
 
-- 经 RAG 流水线生成的回答携带**来源引用**（文档名称，以及可获得时的定位信息，例如被摄入文本中存在的页码）。
+- 回答携带结构化**检索来源**：文档名、稳定 document/excerpt ID、chunk 序号和 score，不保证页码或章节。
+- 引用表示实际提供给模型的片段，不是逐句证明或维修授权。
 - 系统的设计定位是"引用而非替代"：最终维修决策必须由具备资质的工程师依据权威手册（AMM/FIM/IPC）和适用法规做出。
 
 ### 你需要自行准备的内容
 
 | 项目 | 原因 |
 |------|------|
-| 合法获取的手册（当前版本为 PDF） | 仓库不附带任何语料，由你自行摄入 ChromaDB |
-| OpenAI 兼容 LLM 的 API Key | 当前代码默认 DeepSeek；任意端点接入是规划中的目标契约（[docs/CONFIGURATION.zh-CN.md](../../docs/CONFIGURATION.zh-CN.md)） |
+| 合法获取的手册（PDF 或 Markdown 当前版本） | 仓库不附带任何语料，由你自行摄入 ChromaDB |
+| OpenAI 兼容端点及按需提供的 API Key | 支持通用 `AMA_LLM_*` 与有限 DeepSeek 迁移（[docs/CONFIGURATION.zh-CN.md](../../docs/CONFIGURATION.zh-CN.md)） |

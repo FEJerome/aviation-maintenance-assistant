@@ -1,34 +1,25 @@
 #!/bin/bash
-set -e
+set -euo pipefail
+BASE_URL=${BASE_URL:-http://127.0.0.1:8080}
+FAKE_URL=${FAKE_URL:-http://127.0.0.1:18089}
 
-BASE_URL=${BASE_URL:-http://localhost:8080}
+# Corpus-hit question: with the real Chroma store and the synthetic quickstart
+# corpus, zero-hit questions short-circuit to NO_ANSWER before any model call,
+# so degradation assertions must use a question that actually retrieves excerpts.
+QUESTION="For B737-800 with CFM56-7B, what is the oil capacity of the PWR-40S?"
 
-echo "测试优雅降级（需要配置错误 DEEPSEEK_API_KEY）..."
-echo "  注意：本测试会消耗 2 次全局日限额，运行前请确保额度充足"
-
-# 阻塞接口
+curl -s -X POST "$FAKE_URL/__mode" -H "Content-Type: application/json" \
+  -d '{"mode":"http400"}' >/dev/null
 RESPONSE=$(curl -s -X POST "$BASE_URL/api/chat" \
-  -H "Content-Type: application/json" \
-  -d '{"message":"What is AMM?"}')
+  -H "Content-Type: application/json" -d "{\"message\":\"$QUESTION\"}")
+echo "$RESPONSE" | grep -q 'LLM_PROTOCOL_ERROR' || { echo "$RESPONSE"; exit 1; }
 
-if echo "$RESPONSE" | grep -q "当前 AI 服务暂不可用"; then
-  echo "  阻塞接口降级文案正确 PASS"
-else
-  echo "  实际响应: $RESPONSE FAIL"
+STREAM=$(curl -s -N -X POST "$BASE_URL/api/chat/stream" \
+  -H "Content-Type: application/json" -d "{\"message\":\"$QUESTION\"}")
+echo "$STREAM" | grep -q 'LLM_STREAMING_UNSUPPORTED' || { echo "$STREAM"; exit 1; }
+if echo "$STREAM" | grep -q 'event: complete'; then
+  echo "error was followed by complete"
   exit 1
 fi
-
-# 流式接口
-RESPONSE_STREAM=$(curl -s -N -X POST "$BASE_URL/api/chat/stream" \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -d '{"message":"What is AMM?"}')
-
-if echo "$RESPONSE_STREAM" | grep -q "当前 AI 服务暂不可用"; then
-  echo "  流式接口降级文案正确 PASS"
-else
-  echo "  实际响应: $RESPONSE_STREAM FAIL"
-  exit 1
-fi
-
+curl -s -X POST "$FAKE_URL/__reset" >/dev/null
 echo "test-graceful-degradation.sh PASS"

@@ -25,9 +25,9 @@
 | Docker Compose | v2+ | Multi-container orchestration | Bundled with Docker Desktop |
 | JDK 21 | Eclipse Temurin | Local development & compilation | [Adoptium](https://adoptium.net/temurin/releases/?version=21) |
 | Node.js | 20+ | Frontend development | [nodejs.org](https://nodejs.org/) |
-| DeepSeek API Key | — | LLM calls (current default) | [platform.deepseek.com](https://platform.deepseek.com/) |
+| OpenAI-compatible endpoint | — | LLM calls; credentials depend on endpoint | Your provider or local gateway |
 
-> 🎯 **BYOK note**: connecting an arbitrary OpenAI-compatible endpoint (custom `base_url` / `api_key` / `model`) is a **planned target contract** — see [docs/CONFIGURATION.md](docs/CONFIGURATION.md). It is **not supported by the current code**, which defaults to DeepSeek. The variable names below reflect the current implementation.
+> **BYOK**: configure any OpenAI-compatible endpoint with `AMA_LLM_BASE_URL`, `AMA_LLM_API_KEY`, and `AMA_LLM_MODEL`. `DEEPSEEK_API_KEY` remains a limited migration path. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ---
 
@@ -90,7 +90,7 @@ curl -X POST http://localhost:8080/api/chat \
 
 ### 5. Document ingestion (localhost / intranet only)
 
-Place your legally obtained PDF manuals into `backend/data/`, then:
+Place legally obtained PDF or Markdown documents into `backend/data/`, then:
 
 ```bash
 # Should only be executed from the host itself; restrict public access at the
@@ -124,7 +124,7 @@ docker run -d --name chromadb -p 8000:8000 \
 
 ### 2. Start the backend
 
-> ⚠️ **Important**: must be started from inside `backend/`, otherwise the ingestion relative path `Paths.get("data")` will not resolve.
+> ⚠️ **Important**: the corpus directory is resolved from `AMA_DATA_PATH`, which defaults to `./data` relative to the backend process working directory. Starting from inside `backend/` keeps the default pointing at `backend/data/`; if you start from elsewhere, set `AMA_DATA_PATH` explicitly.
 
 **macOS / Linux:**
 
@@ -239,12 +239,26 @@ Best for: running your own instance on a cloud VM or a home/lab server, for your
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `DEEPSEEK_API_KEY` | ✅ | — | DeepSeek API key for LLM calls (current default provider) |
-| `LANGCHAIN4J_OPEN_AI_CHAT_MODEL_API_KEY` | ❌ | `${DEEPSEEK_API_KEY}` | Explicitly set the LLM API key (usually not needed separately) |
-| `LANGCHAIN4J_CHROMA_EMBEDDING_STORE_BASE_URL` | ❌ | `http://localhost:8000` | ChromaDB base URL. Automatically overridden to `http://chromadb:8000` in Docker Compose |
-| `SERVER_PORT` | ❌ | `8080` | Backend HTTP port |
+| `AMA_LLM_BASE_URL` | Generic mode | none | OpenAI-compatible root URL; no automatic `/v1`. |
+| `AMA_LLM_API_KEY` | Cloud mode | none | Endpoint credential; optional only for local endpoints. |
+| `AMA_LLM_MODEL` | Generic mode | none | Model name expected by the endpoint. |
+| `DEEPSEEK_API_KEY` | Legacy only | none | Limited cloud-mode migration mapping. |
+| `AMA_CHROMA_BASE_URL` | No | `http://localhost:8000` | Compose overrides to `http://chromadb:8000`. |
+| `AMA_CHROMA_COLLECTION` | No | `aviation-docs` | Use a new name for complete corpus snapshots. |
+| `AMA_DATA_PATH` | No | `./data` (`/app/data` in Compose) | Read-only PDF/Markdown source directory. |
+| `AMA_STATE_PATH` | No | `./state` (`/app/state` in Compose) | Writable quota state directory. |
+| `AMA_RATE_LIMIT_ENABLED` | No | `true` | Explicit IP-rate-limit switch. |
+| `AMA_LLM_QUOTA_ENABLED` | No | `true` | Disable to avoid quota state reads/writes. |
+| `AMA_LLM_DAILY_QUOTA` | No | `500` | Actual model attempts per UTC day, including translation. |
+| `AMA_TRUST_PROXY_HEADERS` | No | `false` | Enable only behind a controlled proxy with no direct backend access. |
 
-> 🎯 Additional variables for arbitrary OpenAI-compatible endpoints (`base_url`, `model`) are part of a **planned target contract** — see [docs/CONFIGURATION.md](docs/CONFIGURATION.md). They are not wired into the current code.
+### Migration and data boundaries
+
+Do not declare empty generic connection keys in YAML or Compose: any present key selects generic mode and missing values fail validation. Compose passes real values through the optional `.env` file without empty placeholders.
+
+`local-only` allows loopback, private, and ULA addresses but rejects public and link-local targets. It is configuration protection, not a network sandbox. Cloud LLM use sends questions, context, translations, and retrieved excerpts to the configured provider even though embeddings are local.
+
+Old Chroma data is not deleted. Re-ingest into a new collection to obtain stable metadata, verify it, then switch collections. The old `data/daily-llm-quota.json` is not inherited automatically; stop writes and deliberately migrate its verified `date/count`, or use a conservative new quota.
 
 ---
 
@@ -322,7 +336,7 @@ curl -X POST http://localhost:8080/api/chat \
   -d '{"message": "What is AMM?"}'
 ```
 
-If the reply contains manual citations (e.g. `Source: ... Page 36`), the RAG pipeline is working.
+If the response contains structured retrieval citations, the RAG pipeline is working. Citations identify retrieved chunks, not guaranteed page numbers.
 
 ### Q7: API returns 429 Too Many Requests
 
@@ -334,7 +348,7 @@ If the reply contains manual citations (e.g. `Source: ... Page 36`), the RAG pip
 **Fix**:
 
 - Per-IP limit: wait an hour and retry.
-- Daily quota exhausted: it resets the next day; to adjust temporarily, change `DAILY_LIMIT` in `DeepSeekQuotaService`.
+- Daily quota exhausted: it resets on the next UTC day; adjust `AMA_LLM_DAILY_QUOTA` or explicitly disable `AMA_LLM_QUOTA_ENABLED` after reviewing the budget impact.
 
 ---
 

@@ -1,0 +1,30 @@
+{
+  "scenario": "stream-error",
+  "viewport": "1440x900",
+  "screenshot": "foundation-05-stream-error.png",
+  "fakeAttempts": 7,
+  "state": {
+    "citations": 0,
+    "degraded": false,
+    "error": "The LLM stream was interrupted.\n关联 ID：9ff20419-b231-4c7c-9da7-067f786915fd",
+    "systemText": [
+      "Synthetic grounded\n\nThe LLM stream was interrupted.\n关联 ID：9ff20419-b231-4c7c-9da7-067f786915fd"
+    ],
+    "horizontalOverflow": false
+  },
+  "exceptions": [],
+  "networkFailures": [
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED",
+    "net::ERR_ABORTED"
+  ]
+}

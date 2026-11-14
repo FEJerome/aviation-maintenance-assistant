@@ -8,35 +8,27 @@ spring:
     scheduling:
       enabled: true
 
-app:
+ama:
+  runtime-mode: ${AMA_RUNTIME_MODE:cloud-allowed}
+  state-path: ${AMA_STATE_PATH:./state}
+  data-path: ${AMA_DATA_PATH:./data}
+  llm:
+    # Connection keys are deliberately absent: an empty key selects generic mode.
+    timeout-seconds: ${AMA_LLM_TIMEOUT_SECONDS:60}
+    streaming-enabled: ${AMA_LLM_STREAMING_ENABLED:true}
+    quota-enabled: ${AMA_LLM_QUOTA_ENABLED:true}
+    daily-quota: ${AMA_LLM_DAILY_QUOTA:500}
+  chroma:
+    base-url: ${AMA_CHROMA_BASE_URL:http://localhost:8000}
+    collection: ${AMA_CHROMA_COLLECTION:aviation-docs}
   rag:
-    retrieval:
-      max-results: 5
-      min-score: 0.6
-    query-translation:
-      enabled: true
+    max-results: ${AMA_RAG_MAX_RESULTS:5}
+    min-score: ${AMA_RAG_MIN_SCORE:0.6}
+    query-translation-enabled: ${AMA_AVIATION_QUERY_TRANSLATION_ENABLED:true}
 
-# IP 限流配置
 rate-limit:
   chat:
-    capacity: 20
+    enabled: ${AMA_RATE_LIMIT_ENABLED:true}
+    trust-proxy-headers: ${AMA_TRUST_PROXY_HEADERS:false}
+    capacity: ${AMA_RATE_LIMIT_PER_IP_PER_HOUR:20}
     refill-period: 1h
-
-# DeepSeek 全局日限额配置
-deepseek:
-  quota:
-    daily-limit: 500
-
-langchain4j:
-  open-ai:
-    chat-model:
-      base-url: https://api.deepseek.com/v1
-      api-key: ${DEEPSEEK_API_KEY}
-      model-name: deepseek-chat
-      temperature: 0.2
-      timeout: PT60S
-  chroma:
-    embedding-store:
-      base-url: http://localhost:8000
-      collection-name: aviation-docs
-      timeout: PT15S

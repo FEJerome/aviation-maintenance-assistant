@@ -1,13 +1,13 @@
 # ✈️ 机务维修知识助手（Aviation Maintenance Assistant）
 
 > 一个**可自托管的垂直领域 RAG 工具包**，内置**机务维修参考实现**。
-> 使用自己的文档和 DeepSeek API Key，把应用部署在你自己的机器或服务器上。
+> 使用自己的文档和 OpenAI 兼容端点，把应用部署在你自己的机器或服务器上。
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.14-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk)](https://adoptium.net/)
 [![Vue.js](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)](https://vuejs.org/)
 [![LangChain4j](https://img.shields.io/badge/LangChain4j-1.14.1-blue)](https://github.com/langchain4j/langchain4j)
-[![LLM](https://img.shields.io/badge/LLM-OpenAI--compatible%20(default%3A%20DeepSeek)-1E90FF)](docs/CONFIGURATION.md)
+[![LLM](https://img.shields.io/badge/LLM-OpenAI--compatible%20BYOK-1E90FF)](docs/CONFIGURATION.md)
 [![ChromaDB](https://img.shields.io/badge/VectorDB-ChromaDB-FF6600)](https://www.trychroma.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -21,7 +21,7 @@
 
 - 一个**自托管 RAG 工具包**：部署在你自己的基础设施上，摄入你自己的文档，通过聊天 API 或内置演示界面进行问答。
 - 一个**机务维修参考实现**：机型/发动机匹配验证、关键系统确定性路由、基于维修手册的带引用回答。
-- 一个 **OpenAI 兼容 LLM 集成**：后端使用 LangChain4j 的 OpenAI 兼容客户端，当前代码**默认使用 DeepSeek**（`deepseek-chat`）。面向任意兼容端点的统一自带密钥（BYOK）配置是**规划中的目标契约**——见 [docs/CONFIGURATION.zh-CN.md](docs/CONFIGURATION.zh-CN.md)。
+- 一个 **OpenAI 兼容 LLM 集成**：通过 `AMA_LLM_*` 配置任意兼容端点，并保留有限的 `DEEPSEEK_API_KEY` 迁移兼容——见 [docs/CONFIGURATION.zh-CN.md](docs/CONFIGURATION.zh-CN.md)。
 
 **它不是什么：**
 
@@ -34,7 +34,7 @@
 
 - **只读 MCP 服务**——将检索与验证能力暴露为 MCP 工具。契约见 [docs/MCP.md](docs/MCP.md)。状态：**planned**。
 - **Golden-set 评测工具**——可复现的检索与回答质量回归评测。Schema 见 [evals/aviation/golden-set.schema.json](evals/aviation/golden-set.schema.json)。状态：**planned**；评测集本体尚未撰写。
-- **Markdown 文档摄入**——当前摄入控制器**仅接受 PDF**；Markdown 端到端摄入为**规划能力**。[examples/quickstart/](examples/quickstart/) 中提供了合成示例，今天就可以预览格式。
+- **完整持久化 trace**——当前仅提供请求级 traceId 与安全日志，完整可下载 trace 仍为规划能力。
 
 ---
 
@@ -91,8 +91,10 @@
 | ⚡ **Java 21 虚拟线程** | 基于 Virtual Threads 承载 IO 密集型聊天请求，相较固定平台线程池降低 LLM/数据库阻塞调用的线程占用成本 |
 | 🧠 **纯本地嵌入模型** | all-MiniLM-L6-v2 本地 ONNX 推理（20MB），零外部 Embedding API 依赖 |
 | 🛡️ **多层限流保护** | Bucket4j 令牌桶限流（默认 20 次/小时/IP）+ 全局 LLM 日限额（默认 500 次/天） |
-| 🔄 **优雅降级** | LLM 异常时返回固定友好提示，避免前端空白或暴露内部错误 |
+| 🔄 **显式流式降级** | 可选单次 blocking 响应并显示降级元数据；流式失败后绝不自动重试 |
 | 🐳 **Docker 一键部署** | `docker compose up -d` 启动前端 + 后端 + ChromaDB |
+
+> **数据边界**：本地 Embedding 只表示向量化在本地；云 LLM 仍会收到问题、已验证上下文、翻译查询和检索片段。`local-only` 拒绝非本地端点（含 link-local），但不能替代防火墙或容器出网规则。
 
 ---
 
@@ -109,7 +111,7 @@ flowchart LR
     Validation -->|不匹配| Block["⛔ 拦截响应"]
     RAG --> Chroma[("🗄️ ChromaDB\n向量检索\nlocalhost:8000")]
     RAG --> Embed["📐 all-MiniLM-L6-v2\n本地 ONNX 嵌入"]
-    RAG --> LLM["🧠 OpenAI 兼容 LLM\n（默认 DeepSeek）\n生成回答"]
+    RAG --> LLM["🧠 OpenAI 兼容 LLM\n（已配置端点）\n生成回答"]
     Block --> Backend
     LLM --> Backend
     Backend --> Frontend
@@ -123,7 +125,7 @@ flowchart LR
 4. **机型验证** → `AircraftValidationService` 查询硬编码匹配表 → **MATCH**
 5. **会话管理** → 生成 `conversationId`，保存验证状态到 `ChatSessionStore`
 6. **RAG 检索** → `TranslationQueryTransformer` 优化查询 → ChromaDB 向量检索 → 取 Top-5 片段
-7. **LLM 生成** → 将检索片段注入 Prompt → OpenAI 兼容 LLM（默认 DeepSeek）生成带引用的回答
+7. **LLM 生成** → 将检索片段注入 Prompt → 已配置的 OpenAI 兼容 LLM 生成带引用的回答
 8. **响应返回** → `ChatResponse`（reply + conversationId）→ 前端渲染
 
 ---
@@ -135,7 +137,7 @@ flowchart LR
 - [Docker](https://www.docker.com/products/docker-desktop/)（用于 ChromaDB）
 - JDK 21（[Eclipse Temurin](https://adoptium.net/temurin/releases/?version=21)）
 - [Node.js 20+](https://nodejs.org/)（前端开发）
-- LLM API Key——当前默认配置需要 **DeepSeek** API Key（[获取地址](https://platform.deepseek.com/)）。任意 OpenAI 兼容端点接入是**规划中的目标契约**（见 [docs/CONFIGURATION.zh-CN.md](docs/CONFIGURATION.zh-CN.md)）。
+- 已配置的 OpenAI 兼容端点及按需提供的 API Key，支持通用 `AMA_LLM_*` 与 DeepSeek 旧变量迁移（见 [docs/CONFIGURATION.zh-CN.md](docs/CONFIGURATION.zh-CN.md)）。
 
 ### 方式一：Docker Compose 一键启动（推荐）
 
@@ -213,7 +215,7 @@ curl -X POST http://localhost:8080/api/admin/ingest
 ├── docs/                    # 项目文档
 │   ├── API.md               # 接口文档
 │   ├── ARCHITECTURE.md      # 架构说明
-│   ├── CONFIGURATION.md     # BYOK 配置（目标契约，planned）
+│   ├── CONFIGURATION.md     # BYOK 与 local-only 配置
 │   ├── MCP.md               # 只读 MCP 工具（目标契约，planned）
 │   ├── ADR/                 # 架构决策记录
 │   └── design/              # 功能设计文档
@@ -255,8 +257,8 @@ curl -X POST http://localhost:8080/api/admin/ingest
 | 事项 | 状态 | 备注 |
 |------|------|------|
 | 自托管 RAG 工具包 + 机务维修参考实现 | ✅ 当前 | 本仓库 |
-| BYOK：任意 OpenAI 兼容端点（base_url / api_key / model） | 🎯 目标契约 | 契约：[docs/CONFIGURATION.zh-CN.md](docs/CONFIGURATION.zh-CN.md) |
-| Markdown 文档摄入 | 🎯 目标契约 | 当前：仅 PDF |
+| BYOK：任意 OpenAI 兼容端点（base_url / api_key / model） | ✅ 已实现 | 配置：[docs/CONFIGURATION.zh-CN.md](docs/CONFIGURATION.zh-CN.md) |
+| PDF/Markdown 摄入与稳定 ID | ✅ 已实现 | 同版本幂等重写 |
 | 只读 MCP 服务（`validate_aircraft_model` / `search_manual` / `get_manual_excerpt`） | 📋 Planned | 契约：[docs/MCP.md](docs/MCP.md) |
 | Golden-set 评测工具（约 20 条航空条目） | 📋 Planned | Schema 已就绪：[evals/aviation/](evals/aviation/)；条目本体尚未撰写 |
 | 英文演示界面 | 📋 Planned | 当前界面为中文 |
@@ -267,7 +269,7 @@ curl -X POST http://localhost:8080/api/admin/ingest
 
 - [API 文档](docs/API.md) — 后端接口请求/响应示例
 - [架构说明](docs/ARCHITECTURE.md) — 模块职责与数据流详解
-- [配置（目标契约，planned）](docs/CONFIGURATION.zh-CN.md) — OpenAI 兼容 BYOK、ChromaDB、限流
+- [配置](docs/CONFIGURATION.zh-CN.md) — OpenAI 兼容 BYOK、ChromaDB、local-only 与限流
 - [MCP 工具（目标契约，planned）](docs/MCP.md) — 只读 MCP 接口
 - [架构决策记录](docs/ADR/) — 为什么选 LangChain4j、ChromaDB、DeepSeek，以及自托管转型
 - [部署指南](DEPLOY.zh-CN.md) — Docker Compose 部署与环境变量说明

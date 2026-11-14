@@ -3,9 +3,9 @@ services:
     image: chromadb/chroma:0.5.5
     container_name: ama-chromadb
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
-      - ./backend/chroma-data:/chroma/chroma
+      - ${AMA_CHROMA_DATA_PATH:-./backend/chroma-data}:/chroma/chroma
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
       interval: 10s
@@ -20,13 +20,21 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: ama-backend
+    env_file:
+      - path: .env
+        required: false
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
-      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
-      - LANGCHAIN4J_CHROMA_EMBEDDING_STORE_BASE_URL=http://chromadb:8000
+      AMA_RUNTIME_MODE: ${AMA_RUNTIME_MODE:-cloud-allowed}
+      AMA_CHROMA_BASE_URL: http://chromadb:8000
+      AMA_CHROMA_COLLECTION: ${AMA_CHROMA_COLLECTION:-aviation-docs}
+      AMA_DATA_PATH: /app/data
+      AMA_STATE_PATH: /app/state
+      AMA_TRUST_PROXY_HEADERS: "false"
     volumes:
-      - ./backend/data:/app/data
+      - ./backend/data:/app/data:ro
+      - ./backend/state:/app/state
     depends_on:
       chromadb:
         condition: service_healthy
@@ -39,7 +47,7 @@ services:
       dockerfile: Dockerfile
     container_name: ama-frontend
     ports:
-      - "80:80"
+      - "127.0.0.1:80:80"
     depends_on:
       - backend
     networks:

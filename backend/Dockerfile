@@ -26,8 +26,11 @@ RUN addgroup --system appgroup && adduser --system appuser --ingroup appgroup
 # 从构建阶段复制 JAR
 COPY --from=builder /app/target/*.jar app.jar
 
-# 创建 data 目录用于挂载 PDF 源文档
-RUN mkdir -p /app/data && chown -R appuser:appgroup /app
+# 创建只读语料与独立运行状态目录
+RUN mkdir -p /app/data /app/state && chown -R appuser:appgroup /app
+
+ENV AMA_DATA_PATH=/app/data \
+    AMA_STATE_PATH=/app/state
 
 USER appuser
 

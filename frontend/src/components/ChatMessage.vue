@@ -22,6 +22,22 @@
         class="message-content message-content-markdown"
         v-html="renderedContent"
       />
+      <div v-if="degraded" class="degraded-notice">
+        非流式响应：已按配置关闭流式传输（{{ degradationReason }}）
+      </div>
+      <div v-if="errorMessage" class="error-notice" role="alert">
+        {{ errorMessage }}
+        <span v-if="traceId" class="trace-id">关联 ID：{{ traceId }}</span>
+      </div>
+      <div v-if="citations.length" class="citation-list">
+        <div class="citation-title">检索来源</div>
+        <div v-for="citation in citations" :key="citation.excerptId" class="citation-item">
+          <div class="citation-name">{{ citation.documentTitle }} · 片段 {{ citation.chunkIndex + 1 }}</div>
+          <div class="citation-meta">
+            相似度 {{ citation.score.toFixed(3) }} · <code>{{ citation.excerptId }}</code>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -43,6 +59,30 @@ const props = defineProps({
   isStreaming: {
     type: Boolean,
     default: false
+  },
+  citations: {
+    type: Array,
+    default: () => []
+  },
+  degraded: {
+    type: Boolean,
+    default: false
+  },
+  degradationReason: {
+    type: String,
+    default: ''
+  },
+  outcome: {
+    type: String,
+    default: ''
+  },
+  errorMessage: {
+    type: String,
+    default: ''
+  },
+  traceId: {
+    type: String,
+    default: ''
   }
 })
 
@@ -353,5 +393,63 @@ watch(
 
 .message-content-markdown a:hover {
   text-decoration: underline;
+}
+
+.degraded-notice,
+.error-notice {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.degraded-notice {
+  background: #fff7df;
+  color: #735c00;
+}
+
+.error-notice {
+  background: #fff0f0;
+  color: #a12020;
+}
+
+.trace-id {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.citation-list {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #d8d8d8;
+  font-size: 12px;
+}
+
+.citation-title {
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.citation-item {
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.citation-name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.citation-meta {
+  margin-top: 3px;
+  color: #666;
+  overflow-wrap: anywhere;
+}
+
+.citation-meta code {
+  white-space: normal;
+  word-break: break-all;
 }
 </style>

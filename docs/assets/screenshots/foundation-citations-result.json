@@ -1,0 +1,19 @@
+{
+  "scenario": "citations",
+  "viewport": "1440x900",
+  "screenshot": "foundation-02-citations.png",
+  "fakeAttempts": 4,
+  "state": {
+    "citations": 5,
+    "degraded": false,
+    "error": "",
+    "systemText": [
+      "Synthetic grounded answer [S1].\n\n检索来源\nsample-engine-oil-check.md · 片段 3\n相似度 0.713 · exr_31d30e6fec8ed4c23640febe0c750010bcfe21c9592e087f187fbad26f81179c\nsample-engine-oil-check.md · 片段 2\n相似度 0.709 · exr_1c043ec3d59a0ac6cd4186185124ed69c7630896e6b1fc693785670e21c54323\nsample-engine-oil-check.md · 片段 1\n相似度 0.681 · exr_b70487f9da8c2d431c9451907a7e537b487dd00b357ba0427ab01f4f30a4d81b\nsample-tire-inspection.md · 片段 3\n相似度 0.676 · exr_794531c1c50b77738eac76b5bf044c7455ff25b3f1db8c4d83ada03b1c31c4ef\nsample-tire-inspection.md · 片段 1\n相似度 0.658 · exr_4267e90a336e910cd6417396cce61f536b1c068d90d8f50cd61e319a32d81726"
+    ],
+    "horizontalOverflow": false
+  },
+  "exceptions": [],
+  "networkFailures": [
+    "net::ERR_ABORTED"
+  ]
+}

@@ -25,9 +25,9 @@
 | Docker Compose | v2+ | 编排多容器 | 随 Docker Desktop 附带 |
 | JDK 21 | Eclipse Temurin | 本地开发编译 | [Adoptium](https://adoptium.net/temurin/releases/?version=21) |
 | Node.js | 20+ | 前端开发 | [nodejs.org](https://nodejs.org/) |
-| DeepSeek API Key | — | LLM 调用（当前默认） | [platform.deepseek.com](https://platform.deepseek.com/) |
+| OpenAI 兼容端点 | — | LLM 调用，凭据取决于端点 | 自备供应商或本地网关 |
 
-> 🎯 **BYOK 说明**：接入任意 OpenAI 兼容端点（自定义 `base_url` / `api_key` / `model`）是**规划中的目标契约**——见 [docs/CONFIGURATION.zh-CN.md](docs/CONFIGURATION.zh-CN.md)。**当前代码尚不支持**，默认使用 DeepSeek。下文变量名反映当前实现。
+> **BYOK 说明**：使用 `AMA_LLM_BASE_URL`、`AMA_LLM_API_KEY`、`AMA_LLM_MODEL` 接入任意 OpenAI 兼容端点；`DEEPSEEK_API_KEY` 保留有限的迁移兼容。见 [docs/CONFIGURATION.zh-CN.md](docs/CONFIGURATION.zh-CN.md)。
 
 ---
 
@@ -90,7 +90,7 @@ curl -X POST http://localhost:8080/api/chat \
 
 ### 5. 文档摄入（仅限本机/内网）
 
-将合法获取的 PDF 手册放入 `backend/data/`，然后：
+将合法获取的 PDF 或 Markdown 文档放入 `backend/data/`，然后：
 
 ```bash
 # 应仅从服务器本机执行；公网访问必须在反向代理层限制（见场景三）——
@@ -124,7 +124,7 @@ docker run -d --name chromadb -p 8000:8000 \
 
 ### 2. 启动后端
 
-> ⚠️ **重要**：必须从 `backend/` 目录内启动，否则文档摄入的相对路径 `Paths.get("data")` 会失效。
+> ⚠️ **重要**：语料目录由 `AMA_DATA_PATH` 指定，默认 `./data`，相对后端进程工作目录。从 `backend/` 目录内启动可使默认指向 `backend/data/`；从其他目录启动时请显式设置 `AMA_DATA_PATH`。
 
 **macOS / Linux：**
 
@@ -239,12 +239,26 @@ npm run dev
 
 | 变量名 | 必填 | 默认值 | 说明 |
 |--------|------|--------|------|
-| `DEEPSEEK_API_KEY` | ✅ | — | DeepSeek API Key，用于 LLM 调用（当前默认提供方） |
-| `LANGCHAIN4J_OPEN_AI_CHAT_MODEL_API_KEY` | ❌ | `${DEEPSEEK_API_KEY}` | 显式指定 LLM API Key（一般不需要单独设置） |
-| `LANGCHAIN4J_CHROMA_EMBEDDING_STORE_BASE_URL` | ❌ | `http://localhost:8000` | ChromaDB 服务地址。Docker Compose 中自动覆盖为 `http://chromadb:8000` |
-| `SERVER_PORT` | ❌ | `8080` | 后端 HTTP 端口 |
+| `AMA_LLM_BASE_URL` | 通用模式 | 无 | OpenAI 兼容根地址，不自动补 `/v1`。 |
+| `AMA_LLM_API_KEY` | 云模式 | 无 | 端点凭据，仅本地端点可省略。 |
+| `AMA_LLM_MODEL` | 通用模式 | 无 | 端点所需模型名。 |
+| `DEEPSEEK_API_KEY` | 仅旧配置 | 无 | 有限的云模式迁移映射。 |
+| `AMA_CHROMA_BASE_URL` | 否 | `http://localhost:8000` | Compose 覆盖为 `http://chromadb:8000`。 |
+| `AMA_CHROMA_COLLECTION` | 否 | `aviation-docs` | 完整语料快照使用新名称。 |
+| `AMA_DATA_PATH` | 否 | `./data`（Compose 为 `/app/data`） | 只读 PDF/Markdown 语料目录。 |
+| `AMA_STATE_PATH` | 否 | `./state`（Compose 为 `/app/state`） | 可写配额状态目录。 |
+| `AMA_RATE_LIMIT_ENABLED` | 否 | `true` | IP 限流开关。 |
+| `AMA_LLM_QUOTA_ENABLED` | 否 | `true` | 关闭后不读写配额状态。 |
+| `AMA_LLM_DAILY_QUOTA` | 否 | `500` | 每 UTC 日真实模型 attempt，含翻译。 |
+| `AMA_TRUST_PROXY_HEADERS` | 否 | `false` | 仅受控代理且 backend 不可直连时启用。 |
 
-> 🎯 用于接入任意 OpenAI 兼容端点的其他变量（`base_url`、`model`）属于**规划中的目标契约**——见 [docs/CONFIGURATION.zh-CN.md](docs/CONFIGURATION.zh-CN.md)。当前代码尚未接入。
+### 迁移与数据边界
+
+YAML 或 Compose 不得声明空的 generic 连接键：任一键出现即选择通用模式，缺项会失败。Compose 通过可选 `.env` 传递实际值，不使用空占位。
+
+`local-only` 允许 loopback、私网和 ULA，拒绝公共及 link-local 地址；它只是配置防误连，不是网络沙箱。即使 Embedding 在本地，云 LLM 仍会收到问题、上下文、翻译和检索片段。
+
+旧 Chroma 不自动删除。为获得稳定 metadata，请摄入到新 collection，验证后切换。旧 `data/daily-llm-quota.json` 不自动继承；停止写入后核对并人工迁移 `date/count`，或采用保守的新额度。
 
 ---
 
@@ -322,7 +336,7 @@ curl -X POST http://localhost:8080/api/chat \
   -d '{"message": "What is AMM?"}'
 ```
 
-如果返回的回答中包含手册引用来源（如 `来源：... Page 36`），说明 RAG 链路正常工作。
+如果响应包含结构化检索来源，说明 RAG 链路正常工作。引用定位到检索片段，不保证页码。
 
 ### Q7：接口返回 429 Too Many Requests
 
@@ -334,7 +348,7 @@ curl -X POST http://localhost:8080/api/chat \
 **解决**：
 
 - 如果是 IP 限流，等待 1 小时后重试。
-- 如果是全局日限额耗尽，需次日自动恢复；如需临时调整，修改 `DeepSeekQuotaService` 中的 `DAILY_LIMIT`。
+- 全局日限额在下一个 UTC 日恢复；评估预算影响后可调整 `AMA_LLM_DAILY_QUOTA` 或显式关闭 `AMA_LLM_QUOTA_ENABLED`。
 
 ---
 

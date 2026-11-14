@@ -1,5 +1,7 @@
 # 功能设计：优雅降级
 
+> **Superseded:** 当前仅支持配置式 blocking fallback 与安全结构化错误，运行中流式失败不自动重试，见 [ADR-008](../ADR/ADR-008-self-hosted-foundation.md)。
+
 ## 背景
 
 系统依赖 DeepSeek API 生成回答。在实际运行中，可能遇到以下异常：

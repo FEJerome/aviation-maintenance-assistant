@@ -1,33 +1,12 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "测试 Docker Compose 一键启动..."
-echo "  注意：首次构建较慢，请等待 docker compose up -d 完全就绪后再执行"
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1)
+[ "$STATUS" -eq 200 ] || { echo "Frontend status $STATUS"; exit 1; }
 
-# 确保服务已启动
-docker compose ps | grep -E "backend|frontend|chromadb" > /dev/null || {
-  echo "  docker compose 服务未运行 FAIL"
-  exit 1
-}
-
-# 验证前端可访问
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost)
-if [ "$STATUS" -eq 200 ]; then
-  echo "  前端访问: $STATUS PASS"
-else
-  echo "  前端访问: $STATUS FAIL"
-  exit 1
-fi
-
-# 验证后端反向代理
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost/api/chat \
+# This request is deterministically blocked and never reaches a model.
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://127.0.0.1/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"message":"test"}')
-if [ "$STATUS" -eq 200 ] || [ "$STATUS" -eq 400 ] || [ "$STATUS" -eq 429 ]; then
-  echo "  /api/chat 代理: $STATUS PASS"
-else
-  echo "  /api/chat 代理: $STATUS FAIL"
-  exit 1
-fi
-
+  -d '{"message":"B737-800 PW1100G engine oil"}')
+[ "$STATUS" -eq 200 ] || { echo "Chat proxy status $STATUS"; exit 1; }
 echo "test-docker-compose.sh PASS"

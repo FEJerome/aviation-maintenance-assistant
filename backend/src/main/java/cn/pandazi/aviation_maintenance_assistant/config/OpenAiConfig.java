@@ -4,49 +4,49 @@ import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.time.Duration;
 
 @Configuration
 public class OpenAiConfig {
 
-    @Value("${langchain4j.open-ai.chat-model.base-url}")
-    private String baseUrl;
-
-    @Value("${langchain4j.open-ai.chat-model.api-key}")
-    private String apiKey;
-
-    @Value("${langchain4j.open-ai.chat-model.model-name}")
-    private String modelName;
-
-    @Value("${langchain4j.open-ai.chat-model.temperature:0.7}")
-    private double temperature;
-
-    @Value("${langchain4j.open-ai.chat-model.timeout:PT60S}")
-    private Duration timeout;
-
     @Bean
-    public ChatModel chatModel() {
-        return OpenAiChatModel.builder()
-                .baseUrl(baseUrl)
-                .apiKey(apiKey)
-                .modelName(modelName)
-                .temperature(temperature)
-                .timeout(timeout)
-                .build();
+    public LlmSettingsResolver.ResolvedLlmSettings resolvedLlmSettings(LlmSettingsResolver resolver) {
+        return resolver.resolve();
     }
 
     @Bean
-    public StreamingChatModel streamingChatModel() {
-        return OpenAiStreamingChatModel.builder()
-                .baseUrl(baseUrl)
-                .apiKey(apiKey)
-                .modelName(modelName)
-                .temperature(temperature)
-                .timeout(timeout)
-                .build();
+    public ChatModel chatModel(LlmSettingsResolver.ResolvedLlmSettings settings) {
+        OpenAiChatModel.OpenAiChatModelBuilder builder = OpenAiChatModel.builder()
+                .baseUrl(settings.baseUrl())
+                .modelName(settings.model())
+                .timeout(settings.timeout())
+                .maxRetries(0)
+                .logRequests(false)
+                .logResponses(false);
+        if (settings.apiKey() != null) {
+            builder.apiKey(settings.apiKey());
+        }
+        if (settings.temperature() != null) {
+            builder.temperature(settings.temperature());
+        }
+        return builder.build();
+    }
+
+    @Bean
+    public StreamingChatModel streamingChatModel(LlmSettingsResolver.ResolvedLlmSettings settings) {
+        OpenAiStreamingChatModel.OpenAiStreamingChatModelBuilder builder = OpenAiStreamingChatModel.builder()
+                .baseUrl(settings.baseUrl())
+                .modelName(settings.model())
+                .timeout(settings.timeout())
+                .logRequests(false)
+                .logResponses(false);
+        if (settings.apiKey() != null) {
+            builder.apiKey(settings.apiKey());
+        }
+        if (settings.temperature() != null) {
+            builder.temperature(settings.temperature());
+        }
+        return builder.build();
     }
 }

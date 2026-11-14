@@ -12,9 +12,9 @@
 - There is **no** `ingest`, `delete`, `update`, or any other mutation tool, and none is planned for this contract. Corpus management stays with the existing HTTP ingestion endpoint (localhost/intranet only, see [API.md](API.md) and [DEPLOY.md](../DEPLOY.md)).
 - Because tools only read, an MCP client can never modify the vector store, the session store, or any configuration through this interface.
 
-## 2. Identity model (planned deliverable)
+## 2. Identity model (implemented foundation; MCP remains planned)
 
-Stable identifiers are part of the planned ingestion work:
+Ingestion now assigns deterministic content-addressed identifiers. No MCP endpoint has been added.
 
 | Identifier | Assignment | Stability rule |
 |------------|-----------|----------------|

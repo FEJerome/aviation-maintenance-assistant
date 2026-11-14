@@ -1,13 +1,13 @@
 # ✈️ Aviation Maintenance Assistant (AMA)
 
 > A **self-hostable vertical RAG toolkit** for maintenance-manual question answering, with a built-in **aviation maintenance reference implementation**.
-> Bring your own documents and a DeepSeek API key — self-host the application on your own machine or server.
+> Bring your own documents and OpenAI-compatible endpoint — self-host the application on your own machine or server.
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.14-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk)](https://adoptium.net/)
 [![Vue.js](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)](https://vuejs.org/)
 [![LangChain4j](https://img.shields.io/badge/LangChain4j-1.14.1-blue)](https://github.com/langchain4j/langchain4j)
-[![LLM](https://img.shields.io/badge/LLM-OpenAI--compatible%20(default%3A%20DeepSeek)-1E90FF)](docs/CONFIGURATION.md)
+[![LLM](https://img.shields.io/badge/LLM-OpenAI--compatible%20BYOK-1E90FF)](docs/CONFIGURATION.md)
 [![ChromaDB](https://img.shields.io/badge/VectorDB-ChromaDB-FF6600)](https://www.trychroma.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -21,7 +21,7 @@
 
 - A **self-hosted RAG toolkit**: you deploy it on your own infrastructure, ingest your own documents, and query them through a chat API or the bundled demo UI.
 - An **aviation maintenance reference implementation**: aircraft/engine model validation, deterministic routing for critical systems, and source-cited answers grounded in maintenance manuals.
-- An **OpenAI-compatible LLM integration**: the backend uses LangChain4j's OpenAI-compatible client, and the current code **defaults to DeepSeek** (`deepseek-chat`). Provider-neutral BYOK configuration for arbitrary compatible endpoints is a **planned target contract** — see [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+- An **OpenAI-compatible LLM integration** through LangChain4j with provider-neutral `AMA_LLM_*` configuration and a limited `DEEPSEEK_API_KEY` migration path. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 **What it is not:**
 
@@ -34,7 +34,7 @@
 
 - **Read-only MCP server** — expose retrieval and validation as MCP tools. Contract: [docs/MCP.md](docs/MCP.md). Status: **planned**.
 - **Golden-set evaluation harness** — reproducible regression evaluation for retrieval and answer quality. Schema: [evals/aviation/golden-set.schema.json](evals/aviation/golden-set.schema.json). Status: **planned**; the item body is not yet authored.
-- **Markdown document ingestion** — the current ingestion controller accepts **PDF only**; Markdown end-to-end ingestion is **planned**. Synthetic samples are provided in [examples/quickstart/](examples/quickstart/) so you can preview the format today.
+- **Complete persistent traces** — only request-scoped trace IDs and safe logs are currently provided.
 
 ---
 
@@ -91,8 +91,10 @@ Validated sessions support `conversationId` follow-ups; the aircraft context is 
 | ⚡ **Java 21 Virtual Threads** | Serves IO-intensive chat workloads on virtual threads, reducing the thread-cost of blocking LLM/DB calls compared to a fixed platform-thread pool |
 | 🧠 **Fully local embeddings** | all-MiniLM-L6-v2 ONNX inference (20MB), zero external embedding API calls |
 | 🛡️ **Multi-layer rate limiting** | Bucket4j token bucket (default 20 req/hour/IP) plus a global daily LLM quota (default 500 calls/day) |
-| 🔄 **Graceful degradation** | Returns a fixed friendly message on LLM failure instead of blank pages or stack traces |
+| 🔄 **Explicit streaming fallback** | Optional one-shot blocking response with visible degradation metadata; no automatic retry after stream failure |
 | 🐳 **Docker one-command deployment** | `docker compose up -d` starts frontend + backend + ChromaDB |
+
+> **Data boundary:** local embeddings keep vectorization local, but a cloud LLM still receives questions, validated context, translated queries, and retrieved excerpts. `local-only` rejects non-local endpoints (including link-local) but is not a substitute for firewall or container egress rules.
 
 ---
 
@@ -109,7 +111,7 @@ flowchart LR
     Validation -->|Mismatch| Block["⛔ Blocked response"]
     RAG --> Chroma[("🗄️ ChromaDB\nVector search\nlocalhost:8000")]
     RAG --> Embed["📐 all-MiniLM-L6-v2\nLocal ONNX embeddings"]
-    RAG --> LLM["🧠 OpenAI-compatible LLM\n(default: DeepSeek)\nAnswer generation"]
+    RAG --> LLM["🧠 OpenAI-compatible LLM\n(configured endpoint)\nAnswer generation"]
     Block --> Backend
     LLM --> Backend
     Backend --> Frontend
@@ -123,7 +125,7 @@ flowchart LR
 4. **Validation** → `AircraftValidationService` checks the hardcoded match table → **MATCH**
 5. **Session** → generates `conversationId`, stores validation state in `ChatSessionStore`
 6. **RAG retrieval** → `TranslationQueryTransformer` optimizes the query → ChromaDB vector search → Top-5 excerpts
-7. **LLM generation** → retrieved excerpts are injected into the prompt → the OpenAI-compatible LLM (default DeepSeek) generates a cited answer
+7. **LLM generation** → retrieved excerpts are injected into the prompt → the configured OpenAI-compatible LLM generates a cited answer
 8. **Response** → `ChatResponse` (reply + conversationId) → frontend rendering
 
 ---
@@ -135,7 +137,7 @@ flowchart LR
 - [Docker](https://www.docker.com/products/docker-desktop/) (for ChromaDB)
 - JDK 21 ([Eclipse Temurin](https://adoptium.net/temurin/releases/?version=21))
 - [Node.js 20+](https://nodejs.org/) (frontend development)
-- An LLM API key — currently the default configuration expects a **DeepSeek** API key ([get one here](https://platform.deepseek.com/)). Arbitrary OpenAI-compatible endpoints are a **planned target contract** (see [docs/CONFIGURATION.md](docs/CONFIGURATION.md)).
+- A configured OpenAI-compatible endpoint and, where required, its API key. Generic `AMA_LLM_*` and legacy DeepSeek migration are supported (see [docs/CONFIGURATION.md](docs/CONFIGURATION.md)).
 
 ### Option 1: Docker Compose (recommended)
 
@@ -213,7 +215,7 @@ Try the format-first quickstart corpus in [examples/quickstart/](examples/quicks
 ├── docs/                    # Project documentation
 │   ├── API.md               # API reference
 │   ├── ARCHITECTURE.md      # Architecture deep-dive
-│   ├── CONFIGURATION.md     # BYOK configuration (target contract, planned)
+│   ├── CONFIGURATION.md     # BYOK and local-only configuration
 │   ├── MCP.md               # Read-only MCP tools (target contract, planned)
 │   ├── ADR/                 # Architecture Decision Records
 │   └── design/              # Feature design documents
@@ -255,8 +257,8 @@ This repository **does not ship any real manuals**. The aviation reference imple
 | Item | Status | Notes |
 |------|--------|-------|
 | Self-hosted RAG toolkit + aviation reference implementation | ✅ Current | This repository |
-| BYOK: arbitrary OpenAI-compatible endpoint (base_url / api_key / model) | 🎯 Target contract | Contract: [docs/CONFIGURATION.md](docs/CONFIGURATION.md) |
-| Markdown document ingestion | 🎯 Target contract | Current: PDF only |
+| BYOK: arbitrary OpenAI-compatible endpoint (base_url / api_key / model) | ✅ Available | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) |
+| PDF and Markdown ingestion with stable IDs | ✅ Available | Idempotent document versions |
 | Read-only MCP server (`validate_aircraft_model`, `search_manual`, `get_manual_excerpt`) | 📋 Planned | Contract: [docs/MCP.md](docs/MCP.md) |
 | Golden-set evaluation harness (~20 aviation items) | 📋 Planned | Schema ready: [evals/aviation/](evals/aviation/); item body not yet authored |
 | English demo UI | 📋 Planned | Current UI is Chinese |
@@ -267,7 +269,7 @@ This repository **does not ship any real manuals**. The aviation reference imple
 
 - [API Reference](docs/API.md) — request/response examples
 - [Architecture](docs/ARCHITECTURE.md) — module responsibilities and data flow
-- [Configuration (target contract, planned)](docs/CONFIGURATION.md) — OpenAI-compatible BYOK, ChromaDB, rate limiting
+- [Configuration](docs/CONFIGURATION.md) — OpenAI-compatible BYOK, ChromaDB, local-only mode, and rate limiting
 - [MCP Tools (target contract, planned)](docs/MCP.md) — read-only MCP interface
 - [ADRs](docs/ADR/) — why LangChain4j, ChromaDB, DeepSeek, and the self-hosted pivot
 - [Deployment Guide](DEPLOY.md) — Docker Compose deployment & environment variables
