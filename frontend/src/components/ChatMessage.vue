@@ -23,18 +23,18 @@
         v-html="renderedContent"
       />
       <div v-if="degraded" class="degraded-notice">
-        非流式响应：已按配置关闭流式传输（{{ degradationReason }}）
+        {{ t('chat.degradedNotice', { reason: degradationReason }) }}
       </div>
       <div v-if="errorMessage" class="error-notice" role="alert">
         {{ errorMessage }}
-        <span v-if="traceId" class="trace-id">关联 ID：{{ traceId }}</span>
+        <span v-if="traceId" class="trace-id">{{ t('chat.traceIdLabel', { traceId }) }}</span>
       </div>
       <div v-if="citations.length" class="citation-list">
-        <div class="citation-title">检索来源</div>
+        <div class="citation-title">{{ t('chat.citationsTitle') }}</div>
         <div v-for="citation in citations" :key="citation.excerptId" class="citation-item">
-          <div class="citation-name">{{ citation.documentTitle }} · 片段 {{ citation.chunkIndex + 1 }}</div>
+          <div class="citation-name">{{ t('chat.citationName', { title: citation.documentTitle, index: citation.chunkIndex + 1 }) }}</div>
           <div class="citation-meta">
-            相似度 {{ citation.score.toFixed(3) }} · <code>{{ citation.excerptId }}</code>
+            {{ t('chat.citationMetaPrefix', { score: citation.score.toFixed(3) }) }}<code>{{ citation.excerptId }}</code>
           </div>
         </div>
       </div>
@@ -44,8 +44,11 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { renderMarkdown } from '../utils/markdownRenderer.js'
 import { findParagraphBoundary, finalizeStreamingContent } from '../utils/streamingMarkdownProcessor.js'
+
+const { t } = useI18n()
 
 const props = defineProps({
   role: {

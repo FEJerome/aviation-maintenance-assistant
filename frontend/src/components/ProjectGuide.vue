@@ -1,10 +1,10 @@
 <template>
   <div class="guide-overlay" @click.self="handleOverlayClick">
     <div class="guide-modal">
-      <!-- 头部 -->
+      <!-- Header -->
       <div class="guide-header">
-        <h3>航空维修智能助手 · 项目介绍</h3>
-        <button class="guide-close" @click="emitClose" aria-label="关闭">
+        <h3>{{ t('guide.title') }}</h3>
+        <button class="guide-close" @click="emitClose" :aria-label="t('guide.close')">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -12,9 +12,9 @@
         </button>
       </div>
 
-      <!-- 主体：左侧导航 + 右侧内容 -->
+      <!-- Body: left navigation + right content -->
       <div class="guide-body">
-        <!-- 左侧导航 -->
+        <!-- Left navigation -->
         <nav class="guide-nav">
           <button
             v-for="(section, index) in guideSections"
@@ -23,18 +23,18 @@
             @click="activeIndex = index"
           >
             <span class="guide-nav-icon">{{ section.icon }}</span>
-            <span class="guide-nav-text">{{ section.title }}</span>
+            <span class="guide-nav-text">{{ sectionTitle(section.id) }}</span>
           </button>
         </nav>
 
-        <!-- 右侧内容 -->
+        <!-- Right content -->
         <div class="guide-content">
           <div class="guide-content-inner" v-html="renderedContent"></div>
 
-          <!-- 底部操作栏 -->
+          <!-- Footer actions -->
           <div class="guide-footer">
             <button class="guide-start-btn" @click="emitClose">
-              开始对话 →
+              {{ t('guide.start') }}
             </button>
           </div>
         </div>
@@ -45,14 +45,21 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { guideSections } from '../constants/guideContent.js'
 import { renderMarkdown } from '../utils/markdownRenderer.js'
 
+const { t } = useI18n()
+
 const activeIndex = ref(0)
 
+function sectionTitle(id) {
+  return t(`guide.sections.${id}.title`)
+}
+
 const renderedContent = computed(() => {
-  const content = guideSections[activeIndex.value]?.content || ''
-  return renderMarkdown(content)
+  const id = guideSections[activeIndex.value]?.id || ''
+  return renderMarkdown(t(`guide.sections.${id}.content`))
 })
 
 const emit = defineEmits(['close'])
@@ -62,7 +69,7 @@ function emitClose() {
 }
 
 function handleOverlayClick() {
-  // 点击遮罩不关闭，防止误触
+  // Clicking the overlay does not close the guide, to prevent accidental dismissal.
 }
 </script>
 
@@ -92,7 +99,7 @@ function handleOverlayClick() {
   overflow: hidden;
 }
 
-/* 头部 */
+/* Header */
 .guide-header {
   display: flex;
   justify-content: space-between;
@@ -126,14 +133,14 @@ function handleOverlayClick() {
   background-color: #f0f0f0;
 }
 
-/* 主体 */
+/* Body */
 .guide-body {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
 
-/* 左侧导航 */
+/* Left navigation */
 .guide-nav {
   width: 200px;
   background-color: #f8f9fa;
@@ -181,7 +188,7 @@ function handleOverlayClick() {
   line-height: 1.3;
 }
 
-/* 右侧内容 */
+/* Right content */
 .guide-content {
   flex: 1;
   display: flex;
@@ -198,7 +205,7 @@ function handleOverlayClick() {
   font-size: 14px;
 }
 
-/* Markdown 内容样式 */
+/* Markdown content styles */
 .guide-content-inner :deep(p) {
   margin: 0 0 12px 0;
 }
@@ -270,7 +277,7 @@ function handleOverlayClick() {
   color: #666;
 }
 
-/* 底部 */
+/* Footer */
 .guide-footer {
   padding: 16px 32px;
   border-top: 1px solid #e0e0e0;
@@ -296,7 +303,7 @@ function handleOverlayClick() {
   background-color: #0056b3;
 }
 
-/* 移动端适配 */
+/* Mobile adaptation */
 @media (max-width: 600px) {
   .guide-modal {
     width: 95vw;

@@ -1,29 +1,29 @@
 <template>
   <div class="chat-container">
     <div class="chat-header">
-      <h2>机务维修知识助手</h2>
+      <h2>{{ t('app.title') }}</h2>
       <div class="header-actions">
         <button class="guide-entry-btn" @click="showGuide = true">
-          📘 项目介绍
+          {{ t('app.guideButton') }}
         </button>
         <span v-if="conversationId" class="conversation-id">
-          会话: {{ conversationId.substring(0, 8) }}...
+          {{ t('app.conversationPrefix') }}{{ conversationId.substring(0, 8) }}...
         </span>
         <button
           class="toggle-btn"
           @click="useIncrementalRendering = !useIncrementalRendering"
         >
-          {{ useIncrementalRendering ? '增量：开' : '增量：关' }}
+          {{ useIncrementalRendering ? t('app.incrementalOn') : t('app.incrementalOff') }}
         </button>
         <button v-if="conversationId" class="new-chat-btn" @click="startNewChat">
-          新会话
+          {{ t('app.newChat') }}
         </button>
       </div>
     </div>
 
     <div class="chat-messages" ref="messagesContainer">
       <div v-if="messages.length === 0" class="suggested-questions">
-        <h3 class="suggested-questions-title">有什么可以帮您？</h3>
+        <h3 class="suggested-questions-title">{{ t('app.suggestedTitle') }}</h3>
         <div class="suggested-questions-grid">
           <button
             v-for="(question, index) in suggestedQuestions"
@@ -49,12 +49,12 @@
         :trace-id="msg.traceId"
       />
       <div v-if="loading" class="loading-indicator">
-        <span>正在生成...</span>
+        <span>{{ t('app.loading') }}</span>
       </div>
     </div>
 
     <div class="data-notice">
-      使用云端模型时，问题和检索片段会发送给已配置的供应商。
+      {{ t('app.dataNotice') }}
     </div>
 
     <div class="chat-input-area">
@@ -62,12 +62,12 @@
         ref="inputRef"
         v-model="inputText"
         type="text"
-        placeholder="输入问题..."
+        :placeholder="t('app.inputPlaceholder')"
         :disabled="loading"
         @keyup.enter="sendMessage"
       />
       <button @click="sendMessage" :disabled="loading || !inputText.trim()">
-        发送
+        {{ t('app.send') }}
       </button>
     </div>
 
@@ -76,10 +76,13 @@
 </template>
 
 <script setup>
-import { ref, nextTick, watch } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import ChatMessage from './components/ChatMessage.vue'
 import ProjectGuide from './components/ProjectGuide.vue'
 import { createSseParser } from './utils/sseParser.js'
+
+const { t } = useI18n()
 
 const messages = ref([])
 const inputText = ref('')
@@ -90,12 +93,12 @@ const inputRef = ref(null)
 const useIncrementalRendering = ref(true)
 const showGuide = ref(false)
 
-const suggestedQuestions = [
-  'CTLS 飞机 Rotax 912 发动机滑油压力标准值是多少？',
-  'WT9 飞机 Rotax 912 起落架收放系统的日常检查要求是什么？',
-  '飞机结构修理中，铆接修理的一般规范有哪些？',
-  'B737-800 CFM56-7B 发动机滑油压力低，应该如何排故？'
-]
+const suggestedQuestions = computed(() => [
+  t('app.suggestedQuestions.ctls'),
+  t('app.suggestedQuestions.wt9'),
+  t('app.suggestedQuestions.structure'),
+  t('app.suggestedQuestions.b737')
+])
 
 watch(messages, (newVal) => {
   if (newVal.length === 0) {
@@ -116,7 +119,7 @@ function parsePayload(data) {
   try {
     return JSON.parse(data)
   } catch {
-    throw new Error('服务端返回了无法解析的事件数据')
+    throw new Error(t('app.errors.parseEvent'))
   }
 }
 
@@ -165,7 +168,7 @@ async function sendMessage() {
 
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}))
-      fail(payload.message || `请求失败（HTTP ${response.status}）`)
+      fail(payload.message || t('app.errors.requestFailedWithStatus', { status: response.status }))
       return
     }
 
@@ -198,7 +201,7 @@ async function sendMessage() {
       if (event === 'error') {
         const payload = parsePayload(data)
         msg.traceId = payload.traceId || ''
-        fail(payload.message || '请求失败')
+        fail(payload.message || t('app.errors.requestFailed'))
       }
     })
 
@@ -208,7 +211,7 @@ async function sendMessage() {
         parser.push(decoder.decode())
         parser.flush()
         if (!terminal) {
-          fail('响应在完成事件到达前中断')
+          fail(t('app.errors.streamInterrupted'))
         }
         break
       }
@@ -219,13 +222,13 @@ async function sendMessage() {
       }
     }
   } catch (error) {
-    fail(error.message || '请求失败')
+    fail(error.message || t('app.errors.requestFailed'))
   } finally {
     const msg = findMessage(systemMsgId)
     if (msg && msg.isStreaming) {
       msg.isStreaming = false
       if (!terminal) {
-        msg.errorMessage = '响应在完成事件到达前中断'
+        msg.errorMessage = t('app.errors.streamInterrupted')
       }
     }
     loading.value = false
