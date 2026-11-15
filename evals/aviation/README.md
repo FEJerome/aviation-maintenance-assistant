@@ -150,4 +150,4 @@ Golden set 为航空参考实现提供**可复现的回归检查**：
 
 **out_of_scope 映射说明**：产品没有原生 out_of_scope 路由；此类条目按诚实拒答的 `NO_ANSWER` outcome 评测。这是如实注明的映射，而非原生产品路由。
 
-结果按路由与 tag 汇总，使（例如）`validation` 或 `no-answer` 行为的回归能独立于通用问答质量被观察到。可选第二遍通过只读 MCP 端点重放同一评测集（`EVAL_MCP_PASS=1`）。
+结果按路由汇总并附门槛表，使（例如）`validation` 或 `no-answer` 行为的回归能独立于通用问答质量被观察到。当前执行器不产出按 tag 分片，留作后续增强。可选第二遍通过只读 MCP 端点重放同一评测集（`EVAL_MCP_PASS=1`）。
