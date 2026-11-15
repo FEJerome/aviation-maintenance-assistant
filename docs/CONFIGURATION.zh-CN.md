@@ -55,4 +55,16 @@
 
 阻塞与流式生成共用 executor。blocking client 设置 `maxRetries(0)`；当前 streaming 实现没有重试包装，fake 端点测试断言失败时只请求一次。流式失败后不会自动改用 blocking，也不会切换 provider、model 或 URL。
 
-MCP 工具、golden-set 执行器和可下载的完整持久化 trace 仍为规划能力。
+## 只读 MCP 端点（可选）
+
+MCP 服务通过 streamable HTTP 暴露单一只读工具 `ask_maintenance_question`。默认关闭，并与 `/api/chat` 共用每 IP 限流桶。完整契约见 [MCP.md](MCP.md)。
+
+| 变量 | 默认值 | 契约 |
+|---|---|---|
+| `AMA_MCP_ENABLED` | `false` | 总开关；为 `false` 时不注册端点（404）。 |
+| `AMA_MCP_AUTH_TOKEN` | *（空）* | 启用时必填（≥ 16 字符），否则启动 fail-closed。仅 Bearer 鉴权，常量时间比较，绝不记日志。 |
+| `AMA_MCP_PATH` | `/mcp` | 端点路径；必须以 `/` 开头。 |
+
+MCP 鉴权过滤器只认 loopback 远端地址，并永久忽略转发头，与 `AMA_TRUST_PROXY_HEADERS` 无关。部署在代理或容器网络后远端地址将不再是 loopback；请改用本地端口转发。
+
+golden-set 执行器和可下载的完整持久化 trace 仍为规划能力。

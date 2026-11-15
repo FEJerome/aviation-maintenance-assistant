@@ -7,11 +7,26 @@ spring:
   task:
     scheduling:
       enabled: true
+  ai:
+    mcp:
+      server:
+        # Disabled unless explicitly enabled; the ama.mcp.* guard mirrors the same switch.
+        enabled: ${AMA_MCP_ENABLED:false}
+        name: ${spring.application.name}
+        protocol: STREAMABLE
+        streamable-http:
+          mcp-endpoint: ${AMA_MCP_PATH:/mcp}
+        annotation-scanner:
+          enabled: true
 
 ama:
   runtime-mode: ${AMA_RUNTIME_MODE:cloud-allowed}
   state-path: ${AMA_STATE_PATH:./state}
   data-path: ${AMA_DATA_PATH:./data}
+  mcp:
+    enabled: ${AMA_MCP_ENABLED:false}
+    auth-token: ${AMA_MCP_AUTH_TOKEN:}
+    path: ${AMA_MCP_PATH:/mcp}
   llm:
     # Connection keys are deliberately absent: an empty key selects generic mode.
     timeout-seconds: ${AMA_LLM_TIMEOUT_SECONDS:60}

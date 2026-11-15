@@ -4,6 +4,9 @@
 
 本地开发 Base URL：`http://127.0.0.1:8080`。
 
+> **MCP：** 本参考仅覆盖 REST 端点。可选的只读 MCP 服务（单一 `ask_maintenance_question`
+> 工具、streamable HTTP、限 loopback 且需 Bearer Token、默认关闭）另有契约：[MCP.md](MCP.md)。
+
 ## POST /api/chat
 
 执行一次阻塞式 grounded 聊天请求。

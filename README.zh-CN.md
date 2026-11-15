@@ -30,9 +30,12 @@
 - **不是通用聊天机器人。** 它针对受控语料库上的可追溯、带引用问答做了优化。
 - **不附带任何真实手册。** 绝不包含受版权保护的文档。请自带合法获取的文档（见[数据来源](#数据来源)）。
 
+**已实现的可选能力：**
+
+- **只读 MCP 端点**——单一 `ask_maintenance_question` 工具，基于 streamable HTTP，返回答案并以原文摘录作为证据。契约见 [docs/MCP.md](docs/MCP.md)。默认关闭；启用后仅限 loopback 并以 Bearer Token 鉴权。
+
 **规划中的能力（目标契约，当前尚不可用）：**
 
-- **只读 MCP 服务**——将检索与验证能力暴露为 MCP 工具。契约见 [docs/MCP.md](docs/MCP.md)。状态：**planned**。
 - **Golden-set 评测工具**——可复现的检索与回答质量回归评测。Schema 见 [evals/aviation/golden-set.schema.json](evals/aviation/golden-set.schema.json)。状态：**planned**；评测集本体尚未撰写。
 - **完整持久化 trace**——当前仅提供请求级 traceId 与安全日志，完整可下载 trace 仍为规划能力。
 
@@ -216,7 +219,7 @@ curl -X POST http://localhost:8080/api/admin/ingest
 │   ├── API.md               # 接口文档
 │   ├── ARCHITECTURE.md      # 架构说明
 │   ├── CONFIGURATION.md     # BYOK 与 local-only 配置
-│   ├── MCP.md               # 只读 MCP 工具（目标契约，planned）
+│   ├── MCP.md               # 只读 MCP 工具（单一 ask_maintenance_question）
 │   ├── ADR/                 # 架构决策记录
 │   └── design/              # 功能设计文档
 ├── examples/                # 快速开始语料与能力说明
@@ -259,7 +262,7 @@ curl -X POST http://localhost:8080/api/admin/ingest
 | 自托管 RAG 工具包 + 机务维修参考实现 | ✅ 当前 | 本仓库 |
 | BYOK：任意 OpenAI 兼容端点（base_url / api_key / model） | ✅ 已实现 | 配置：[docs/CONFIGURATION.zh-CN.md](docs/CONFIGURATION.zh-CN.md) |
 | PDF/Markdown 摄入与稳定 ID | ✅ 已实现 | 同版本幂等重写 |
-| 只读 MCP 服务（`validate_aircraft_model` / `search_manual` / `get_manual_excerpt`） | 📋 Planned | 契约：[docs/MCP.md](docs/MCP.md) |
+| 只读 MCP 端点（streamable HTTP 上的 `ask_maintenance_question`） | ✅ 已实现（可选） | 默认关闭；契约：[docs/MCP.md](docs/MCP.md) |
 | Golden-set 评测工具（约 20 条航空条目） | 📋 Planned | Schema 已就绪：[evals/aviation/](evals/aviation/)；条目本体尚未撰写 |
 | 英文演示界面 | 📋 Planned | 当前界面为中文 |
 
@@ -270,7 +273,7 @@ curl -X POST http://localhost:8080/api/admin/ingest
 - [API 文档](docs/API.md) — 后端接口请求/响应示例
 - [架构说明](docs/ARCHITECTURE.md) — 模块职责与数据流详解
 - [配置](docs/CONFIGURATION.zh-CN.md) — OpenAI 兼容 BYOK、ChromaDB、local-only 与限流
-- [MCP 工具（目标契约，planned）](docs/MCP.md) — 只读 MCP 接口
+- [MCP 工具](docs/MCP.md) — streamable HTTP 上的只读 `ask_maintenance_question`
 - [架构决策记录](docs/ADR/) — 为什么选 LangChain4j、ChromaDB、DeepSeek，以及自托管转型
 - [部署指南](DEPLOY.zh-CN.md) — Docker Compose 部署与环境变量说明
 - [贡献规范](docs/CONTRIBUTING.md) — 文档驱动开发流程与 Commit 规范

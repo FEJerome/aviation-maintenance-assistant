@@ -2,6 +2,7 @@ package cn.pandazi.aviation_maintenance_assistant.chat.service;
 
 import cn.pandazi.aviation_maintenance_assistant.chat.dto.ChatResponse;
 import cn.pandazi.aviation_maintenance_assistant.chat.session.ChatSessionStore;
+import cn.pandazi.aviation_maintenance_assistant.rag.RetrievedExcerpt;
 import cn.pandazi.aviation_maintenance_assistant.validation.service.AircraftValidationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -97,6 +98,40 @@ class MaintenanceChatServiceTest {
         assertThat(streaming.getValue().systemPrompt()).isEqualTo(blocking.getValue().systemPrompt());
     }
 
+    @Test
+    void processWithExcerptsExposesRetrievedEvidenceAndProcessDelegates() {
+        RetrievedExcerpt first = new RetrievedExcerpt(
+                "first excerpt", "excerpt-1", "doc-1", "Manual", 0, 0.9);
+        RetrievedExcerpt second = new RetrievedExcerpt(
+                "second excerpt", "excerpt-2", "doc-1", "Manual", 1, 0.8);
+        when(grounded.respond(any())).thenReturn(new GroundedChatService.GroundedResult(
+                "Synthetic answer",
+                ChatResponse.Outcome.ANSWERED,
+                ChatResponse.GenerationMode.NON_STREAMING,
+                false,
+                null,
+                List.of(),
+                List.of(first, second)));
+
+        MaintenanceChatService.ProcessedAnswer answer =
+                service.processWithExcerpts("conversation", "CTLS Rotax 912 engine oil pressure");
+        ChatResponse response = service.process("conversation", "CTLS Rotax 912 engine oil pressure");
+
+        assertThat(answer.excerpts()).containsExactly(first, second);
+        assertThat(answer.response().outcome()).isEqualTo(ChatResponse.Outcome.ANSWERED);
+        assertThat(response.outcome()).isEqualTo(answer.response().outcome());
+        assertThat(response.reply()).isEqualTo(answer.response().reply());
+    }
+
+    @Test
+    void processWithExcerptsShortcutCarriesNoEvidence() {
+        MaintenanceChatService.ProcessedAnswer answer =
+                service.processWithExcerpts("conversation", "CTLS engine oil pressure");
+
+        assertThat(answer.response().outcome()).isEqualTo(ChatResponse.Outcome.CLARIFICATION_REQUIRED);
+        assertThat(answer.excerpts()).isEmpty();
+    }
+
     private GroundedChatService.GroundedResult result() {
         return new GroundedChatService.GroundedResult(
                 "Synthetic answer",
@@ -104,6 +139,7 @@ class MaintenanceChatServiceTest {
                 ChatResponse.GenerationMode.NON_STREAMING,
                 false,
                 null,
+                List.of(),
                 List.of());
     }
 }

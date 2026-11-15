@@ -30,9 +30,12 @@
 - **Not a general-purpose chatbot.** It is optimized for grounded, document-cited Q&A over a controlled corpus.
 - **Not shipping with any real manuals.** Copyrighted documentation is never included. You bring your own legally obtained documents (see [Data Sources](#data-sources)).
 
+**Available (opt-in):**
+
+- **Read-only MCP endpoint** — one `ask_maintenance_question` tool over streamable HTTP, returning the answer with the original manual excerpts as evidence. Contract: [docs/MCP.md](docs/MCP.md). Disabled by default; loopback-only with bearer-token auth when enabled.
+
 **Planned (target contracts, not yet available):**
 
-- **Read-only MCP server** — expose retrieval and validation as MCP tools. Contract: [docs/MCP.md](docs/MCP.md). Status: **planned**.
 - **Golden-set evaluation harness** — reproducible regression evaluation for retrieval and answer quality. Schema: [evals/aviation/golden-set.schema.json](evals/aviation/golden-set.schema.json). Status: **planned**; the item body is not yet authored.
 - **Complete persistent traces** — only request-scoped trace IDs and safe logs are currently provided.
 
@@ -216,7 +219,7 @@ Try the format-first quickstart corpus in [examples/quickstart/](examples/quicks
 │   ├── API.md               # API reference
 │   ├── ARCHITECTURE.md      # Architecture deep-dive
 │   ├── CONFIGURATION.md     # BYOK and local-only configuration
-│   ├── MCP.md               # Read-only MCP tools (target contract, planned)
+│   ├── MCP.md               # Read-only MCP tool (single ask_maintenance_question)
 │   ├── ADR/                 # Architecture Decision Records
 │   └── design/              # Feature design documents
 ├── examples/                # Quickstart corpus & capability notes
@@ -259,7 +262,7 @@ This repository **does not ship any real manuals**. The aviation reference imple
 | Self-hosted RAG toolkit + aviation reference implementation | ✅ Current | This repository |
 | BYOK: arbitrary OpenAI-compatible endpoint (base_url / api_key / model) | ✅ Available | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) |
 | PDF and Markdown ingestion with stable IDs | ✅ Available | Idempotent document versions |
-| Read-only MCP server (`validate_aircraft_model`, `search_manual`, `get_manual_excerpt`) | 📋 Planned | Contract: [docs/MCP.md](docs/MCP.md) |
+| Read-only MCP endpoint (`ask_maintenance_question` over streamable HTTP) | ✅ Available (opt-in) | Disabled by default; contract: [docs/MCP.md](docs/MCP.md) |
 | Golden-set evaluation harness (~20 aviation items) | 📋 Planned | Schema ready: [evals/aviation/](evals/aviation/); item body not yet authored |
 | English demo UI | 📋 Planned | Current UI is Chinese |
 
@@ -270,7 +273,7 @@ This repository **does not ship any real manuals**. The aviation reference imple
 - [API Reference](docs/API.md) — request/response examples
 - [Architecture](docs/ARCHITECTURE.md) — module responsibilities and data flow
 - [Configuration](docs/CONFIGURATION.md) — OpenAI-compatible BYOK, ChromaDB, local-only mode, and rate limiting
-- [MCP Tools (target contract, planned)](docs/MCP.md) — read-only MCP interface
+- [MCP Tools](docs/MCP.md) — read-only `ask_maintenance_question` over streamable HTTP
 - [ADRs](docs/ADR/) — why LangChain4j, ChromaDB, DeepSeek, and the self-hosted pivot
 - [Deployment Guide](DEPLOY.md) — Docker Compose deployment & environment variables
 - [Contributing](docs/CONTRIBUTING.md) — documentation-driven workflow & commit conventions
