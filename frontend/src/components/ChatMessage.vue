@@ -325,34 +325,36 @@ watch(
   text-decoration: underline;
 }
 
-/* Markdown styles after streaming completes (fallback path) */
-.message-content-markdown h1,
-.message-content-markdown h2,
-.message-content-markdown h3 {
+/* Markdown styles for the non-streaming fallback rendering.
+ * :deep() pierces the scoped-style boundary so these rules reach nodes
+ * injected via v-html, matching the confirmed-block styles above. */
+.message-content-markdown :deep(h1),
+.message-content-markdown :deep(h2),
+.message-content-markdown :deep(h3) {
   margin: 12px 0 8px;
   font-size: 15px;
   color: #333;
 }
 
-.message-content-markdown h4,
-.message-content-markdown h5,
-.message-content-markdown h6 {
+.message-content-markdown :deep(h4),
+.message-content-markdown :deep(h5),
+.message-content-markdown :deep(h6) {
   margin: 10px 0 6px;
   font-size: 14px;
   color: #444;
 }
 
-.message-content-markdown ul,
-.message-content-markdown ol {
+.message-content-markdown :deep(ul),
+.message-content-markdown :deep(ol) {
   padding-left: 20px;
   margin: 8px 0;
 }
 
-.message-content-markdown li {
+.message-content-markdown :deep(li) {
   margin: 4px 0;
 }
 
-.message-content-markdown pre {
+.message-content-markdown :deep(pre) {
   background: #f6f8fa;
   padding: 12px;
   border-radius: 6px;
@@ -360,16 +362,16 @@ watch(
   margin: 10px 0;
 }
 
-.message-content-markdown code {
+.message-content-markdown :deep(code) {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 13px;
 }
 
-.message-content-markdown p {
+.message-content-markdown :deep(p) {
   margin: 8px 0;
 }
 
-.message-content-markdown blockquote {
+.message-content-markdown :deep(blockquote) {
   margin: 8px 0;
   padding: 8px 12px;
   border-left: 4px solid #d0d7de;
@@ -377,39 +379,39 @@ watch(
   color: #57606a;
 }
 
-.message-content-markdown table {
+.message-content-markdown :deep(table) {
   width: 100%;
   border-collapse: collapse;
   margin: 12px 0;
   font-size: 13px;
 }
 
-.message-content-markdown th,
-.message-content-markdown td {
+.message-content-markdown :deep(th),
+.message-content-markdown :deep(td) {
   border: 1px solid #d0d7de;
   padding: 8px 12px;
   text-align: left;
 }
 
-.message-content-markdown th {
+.message-content-markdown :deep(th) {
   background-color: #f6f8fa;
   font-weight: 600;
 }
 
-.message-content-markdown tbody tr:nth-child(even) {
+.message-content-markdown :deep(tbody tr:nth-child(even)) {
   background-color: #f6f8fa;
 }
 
-.message-content-markdown tbody tr:hover {
+.message-content-markdown :deep(tbody tr:hover) {
   background-color: #f3f4f6;
 }
 
-.message-content-markdown a {
+.message-content-markdown :deep(a) {
   color: #0969da;
   text-decoration: none;
 }
 
-.message-content-markdown a:hover {
+.message-content-markdown :deep(a:hover) {
   text-decoration: underline;
 }
 
