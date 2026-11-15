@@ -1,48 +1,48 @@
 # backend — Aviation Maintenance Assistant
 
-Spring Boot 3.5（Java 21）实现的后端服务：RAG 检索问答、机型准入验证、文档摄入、LLM 配额与限流。
+Spring Boot 3.5 (Java 21) backend service: RAG retrieval Q&A, aircraft-model admission validation, document ingestion, LLM quota and rate limiting.
 
-> 本文件只保留后端入口信息；**权威文档以根目录与 `docs/` 为准**（见文末指针），此处不重复维护细节，避免再次过时。
+> This file keeps only backend entry points. **The authoritative documentation lives in the repository root and in `docs/`** (see the pointers at the end); implementation details are intentionally not duplicated here to avoid going stale.
 
-## 启动与配置
+## Getting Started and Configuration
 
-- 启动方式、环境变量与部署：根目录 [DEPLOY.md](../DEPLOY.md)（中文见 [DEPLOY.zh-CN.md](../DEPLOY.zh-CN.md)）
-- 全部配置键与环境变量：[../docs/CONFIGURATION.md](../docs/CONFIGURATION.md)
-- 语料目录由 `AMA_DATA_PATH` 指定，默认 `./data`，**相对后端进程工作目录**；从 `backend/` 目录内启动即可命中 `backend/data/`，或以显式路径启动
-- LLM 连接（generic 三件套 `AMA_LLM_BASE_URL` / `AMA_LLM_API_KEY` / `AMA_LLM_MODEL`）与 `AMA_RUNTIME_MODE=local-only` 约束：见 [../docs/CONFIGURATION.md](../docs/CONFIGURATION.md)
+- Startup, environment variables, and deployment: root [DEPLOY.md](../DEPLOY.md) (Chinese: [DEPLOY.zh-CN.md](../DEPLOY.zh-CN.md))
+- Full configuration keys and environment variables: [../docs/CONFIGURATION.md](../docs/CONFIGURATION.md)
+- The corpus directory is set by `AMA_DATA_PATH`, defaulting to `./data` **relative to the backend process working directory**; starting from within `backend/` hits `backend/data/`, or start with an explicit path
+- LLM connection (generic OpenAI-compatible triple `AMA_LLM_BASE_URL` / `AMA_LLM_API_KEY` / `AMA_LLM_MODEL`) and the `AMA_RUNTIME_MODE=local-only` constraint: see [../docs/CONFIGURATION.md](../docs/CONFIGURATION.md)
 
-## 开发
+## Development
 
 ```bash
-./mvnw.cmd test          # 全量单元/切片测试（Windows；macOS/Linux 用 ./mvnw）
+./mvnw.cmd test          # full unit/slice test suite (Windows; use ./mvnw on macOS/Linux)
 ./mvnw.cmd spring-boot:run
 ```
 
-loopback 联调环境（fake OpenAI ＋ 隔离 Chroma）：[../scripts/tests/README.md](../scripts/tests/README.md)
+Loopback integration environment (fake OpenAI + isolated Chroma): [../scripts/tests/README.md](../scripts/tests/README.md)
 
-## 结构速览
+## Structure Overview
 
 ```
 src/main/java/cn/pandazi/aviation_maintenance_assistant/
-├── chat/        # /api/chat 问答接口、机型提取与主题路由、会话、Prompt、GroundedChatService
-├── document/    # /api/admin/ingest 摄入接口、内容寻址、Tika/Markdown 解析
-├── rag/         # Chroma 检索、查询翻译
-├── validation/  # 机型-发动机匹配验证
-├── config/      # LLM 解析、local-only 端点守卫、限流、AmaProperties
-└── service/     # LlmCallExecutor（唯一模型调用边界）、LlmQuotaService
+├── chat/        # /api/chat Q&A endpoint, model extraction and topic routing, sessions, prompts, GroundedChatService
+├── document/    # /api/admin/ingest ingestion endpoint, content addressing, Tika/Markdown parsing
+├── rag/         # Chroma retrieval, query translation
+├── validation/  # aircraft-model/engine match validation
+├── config/      # LLM settings resolution, local-only endpoint guard, rate limiting, AmaProperties
+└── service/     # LlmCallExecutor (the only model-call boundary), LlmQuotaService
 ```
 
-## 接口契约
+## API Contract
 
-REST 接口与错误码：[../docs/API.md](../docs/API.md)（中文见 [../docs/API.zh-CN.md](../docs/API.zh-CN.md)）
+REST endpoints and error codes: [../docs/API.md](../docs/API.md) (Chinese: [../docs/API.zh-CN.md](../docs/API.zh-CN.md))
 
-## 文档指针
+## Documentation Pointers
 
-| 主题 | 位置 |
-|------|------|
-| 项目总览、演示与截图 | [根目录 README.md](../README.md) |
-| 部署与运维 | [DEPLOY.md](../DEPLOY.md) / [DEPLOY.zh-CN.md](../DEPLOY.zh-CN.md) |
-| 配置键全表 | [docs/CONFIGURATION.md](../docs/CONFIGURATION.md) |
-| API 契约 | [docs/API.md](../docs/API.md) / [docs/API.zh-CN.md](../docs/API.zh-CN.md) |
-| 架构 | [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) |
-| 测试脚本 | [scripts/tests/README.md](../scripts/tests/README.md) |
+| Topic | Location |
+|-------|----------|
+| Project overview, demo, screenshots | [root README.md](../README.md) |
+| Deployment and operations | [DEPLOY.md](../DEPLOY.md) / [DEPLOY.zh-CN.md](../DEPLOY.zh-CN.md) |
+| Full configuration key table | [docs/CONFIGURATION.md](../docs/CONFIGURATION.md) |
+| API contract | [docs/API.md](../docs/API.md) / [docs/API.zh-CN.md](../docs/API.zh-CN.md) |
+| Architecture | [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) |
+| Test scripts | [scripts/tests/README.md](../scripts/tests/README.md) |

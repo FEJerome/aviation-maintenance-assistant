@@ -1,305 +1,308 @@
-# 开发贡献规范（CONTRIBUTING.md）
+# Contributing Guidelines (CONTRIBUTING.md)
 
-> 本文档定义了本项目的协作流程与质量标准。
+> This document defines the collaboration workflow and quality standards for this project.
 >
-> **适用场景**：
-> - 当前：单兵作战（项目作者一人开发），用于自我约束与质量沉淀
-> - 未来：若转为多人协作或开源，本规范即为协作契约
+> **Scope**:
+> - Current: PR-based contributions with CI checks are enforced on `main`: backend tests and frontend tests/build are blocking; `npm audit` is informational on push/PR (only the weekly scheduled run may fail for real).
+> - Historical note: the project started as a single-maintainer effort; the early trunk-based workflow is kept below for reference only and no longer describes current practice.
 
 ---
 
-## 目录
+## Table of Contents
 
-- [核心理念：文档驱动开发（DDD）](#核心理念文档驱动开发ddd)
-- [开发流程](#开发流程)
-- [文档模板](#文档模板)
-  - [新功能设计文档模板](#新功能设计文档模板)
-  - [ADR 模板](#adr-模板)
-- [Commit 规范](#commit-规范)
-- [代码审查清单](#代码审查清单)
-- [分支模型](#分支模型)
-
----
-
-## 核心理念：文档驱动开发（DDD）
-
-**Document-Driven Development**：先写设计文档，再写代码，代码随文档更新。
-
-为什么不是"代码即文档"？
-
-- 代码回答"怎么做"，文档回答"为什么做"和"做什么"
-- 协作者没有时间阅读源码，文档是最高效的沟通媒介
-- 写文档的过程本身就是设计过程，能提前暴露方案缺陷
+- [Core Philosophy: Document-Driven Development (DDD)](#core-philosophy-document-driven-development-ddd)
+- [Development Workflow](#development-workflow)
+- [Document Templates](#document-templates)
+  - [Feature Design Document Template](#feature-design-document-template)
+  - [ADR Template](#adr-template)
+- [Commit Conventions](#commit-conventions)
+- [Code Review Checklist](#code-review-checklist)
+- [Branch Model](#branch-model)
 
 ---
 
-## 开发流程
+## Core Philosophy: Document-Driven Development (DDD)
+
+**Document-Driven Development**: write the design document first, then the code, and keep the code and the documents in sync.
+
+Why not "code as documentation"?
+
+- Code answers "how"; documents answer "why" and "what".
+- Collaborators do not have time to read the source code; documents are the most efficient communication medium.
+- Writing the document *is* the design process — it surfaces flaws in the plan before they are baked into code.
+
+---
+
+## Development Workflow
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  1. 需求/问题  │ --> │  2. 写设计文档 │ --> │  3. 写代码实现 │ --> │  4. 更新文档  │
-│   (Issue/脑暴) │     │  (ADR/设计PRD) │     │  (Feature/Dev) │     │  (API/架构图) │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
-                                                                  │
-                                                                  v
-                                                           ┌─────────────┐
-                                                           │  5. Commit  │
-                                                           │  (结构化规范) │
-                                                           └─────────────┘
-                                                                  │
-                                                                  v
-                                                           ┌─────────────┐
-                                                           │  6. Push    │
-                                                           └─────────────┘
++---------------+     +---------------+     +---------------+     +---------------+
+| 1. Need/Issue | --> | 2. Write      | --> | 3. Implement  | --> | 4. Update     |
+| (Issue/idea)  |     | design doc    |     | the code      |     | documents     |
+| (brainstorm)  |     | (ADR/PRD)     |     | (Feature/Dev) |     | (API/diagram) |
++---------------+     +---------------+     +---------------+     +---------------+
+                                                                          |
+                                                                          v
+                                                               +---------------+
+                                                               | 5. Commit     |
+                                                               | (structured)  |
+                                                               +---------------+
+                                                                          |
+                                                                          v
+                                                               +---------------+
+                                                               | 6. PR + CI    |
+                                                               | (review +     |
+                                                               |   checks)     |
+                                                               +---------------+
 ```
 
-### 各阶段要求
+### Requirements per stage
 
-| 阶段 | 输入 | 输出 | 验收标准 |
-|------|------|------|---------|
-| **1. 需求** | 用户反馈、技术学习 | 一句话需求描述 | 能向非技术人员讲清楚价值 |
-| **2. 设计** | 需求描述 | `docs/design/xxx.md` 或 `docs/ADR/ADR-00x-xxx.md` | 包含背景、方案对比、接口变更、测试计划 |
-| **3. 编码** | 设计文档 | 可运行的代码 + 单元测试 | 设计文档中的接口/架构在代码中得到体现 |
-| **4. 更新** | 代码变更 | 同步更新的 `docs/API.md`、`docs/ARCHITECTURE.md` | API 文档包含新接口的 curl 示例，架构图反映新模块 |
-| **5. Commit** | 代码 + 文档 | Git commit | 符合结构化 commit 规范（见下文） |
-| **6. Push** | Commit | 远程仓库 | CI 通过（如有）、自我审查清单通过 |
+| Stage | Input | Output | Acceptance criteria |
+|-------|-------|--------|---------------------|
+| **1. Need** | User feedback, technical exploration | One-sentence need statement | Value can be explained to a non-technical person |
+| **2. Design** | Need statement | `docs/design/xxx.md` or `docs/ADR/ADR-00x-xxx.md` | Includes background, option comparison, interface changes, test plan |
+| **3. Code** | Design document | Runnable code + unit tests | Interfaces/architecture from the design document are reflected in code |
+| **4. Update** | Code changes | Updated `docs/API.md`, `docs/ARCHITECTURE.md` | API docs include curl examples for new endpoints; the architecture diagram reflects new modules |
+| **5. Commit** | Code + documents | Git commit | Follows the structured commit convention (below) |
+| **6. PR + CI** | Commit(s) | Merged pull request | Code review checklist passed; all CI checks green |
 
 ---
 
-## 文档模板
+## Document Templates
 
-### 新功能设计文档模板
+### Feature Design Document Template
 
-创建文件：`docs/design/FEATURE-xxx-功能名称.md`
+Create the file at: `docs/design/FEATURE-xxx-feature-name.md`
 
 ```markdown
-# 功能设计：【功能名称】
+# Feature Design: [Feature Name]
 
-## 背景
+## Background
 
-【要解决什么问题？当前系统的痛点是什么？】
+[What problem does this solve? What is the current pain point?]
 
-## 目标
+## Goals
 
-【成功标准是什么？如何验证这个功能是对的？】
+[What are the success criteria? How do we verify the feature is correct?]
 
-## 方案对比
+## Option Comparison
 
-| 方案 | 优点 | 缺点 | 结论 |
-|------|------|------|------|
-| A | ... | ... | ❌ 放弃原因 |
-| B | ... | ... | ✅ 采纳 |
+| Option | Pros | Cons | Conclusion |
+|--------|------|------|------------|
+| A | ... | ... | ❌ Rejected, because ... |
+| B | ... | ... | ✅ Adopted |
 
-## 详细设计
+## Detailed Design
 
-### 接口变更
+### Interface Changes
 
-【新增/修改的 REST 接口、DTO 字段】
+[New/modified REST endpoints, DTO fields]
 
-### 架构调整
+### Architecture Adjustments
 
-【新增/修改的模块、类、数据流】
+[New/modified modules, classes, data flows]
 
-### 数据模型
+### Data Model
 
-【新增的数据库表、缓存 key、文件格式】
+[New database tables, cache keys, file formats]
 
-## 测试计划
+## Test Plan
 
-【单元测试、集成测试、验收场景】
+[Unit tests, integration tests, acceptance scenarios]
 
-## 风险与回滚
+## Risks and Rollback
 
-【最坏情况是什么？如何回滚？】
+[What is the worst case? How do we roll back?]
 
-## 相关文档
+## Related Documents
 
 - [ADR-xxx](../ADR/ADR-xxx-xxx.md)
 ```
 
-### ADR 模板
+### ADR Template
 
-创建文件：`docs/ADR/ADR-00x-标题.md`
+Create the file at: `docs/ADR/ADR-00x-title.md`
 
 ```markdown
-# ADR-00x：【标题】
+# ADR-00x: [Title]
 
-- **状态**：Proposed / Accepted / Deprecated / Superseded
-- **日期**：YYYY-MM-DD
-- **决策者**：
+- **Status**: Proposed / Accepted / Deprecated / Superseded
+- **Date**: YYYY-MM-DD
+- **Decision makers**:
 
-## 背景
+## Background
 
-【要解决什么问题？当时的上下文和约束？】
+[What problem needed solving? What was the context and the constraints at the time?]
 
-## 考虑的选项
+## Options Considered
 
-### 选项 A：【名称】
+### Option A: [Name]
 
-**优势**：...
-**劣势**：...
+**Strengths**: ...
+**Weaknesses**: ...
 
-### 选项 B：【名称】
+### Option B: [Name]
 
-**优势**：...
-**劣势**：...
+**Strengths**: ...
+**Weaknesses**: ...
 
-## 决策
+## Decision
 
-【选了什么？一句话结论。】
+[What was chosen? One-sentence conclusion.]
 
-## 后果
+## Consequences
 
-### 积极影响
+### Positive effects
 ...
 
-### 消极影响 / trade-off
+### Negative effects / trade-offs
 ...
 
-### 相关决策
+### Related decisions
 - [ADR-xxx](ADR-xxx-xxx.md)
 
-## 相关链接
+## References
 ...
 ```
 
 ---
 
-## Commit 规范
+## Commit Conventions
 
-### 结构化 Commit
+### Structured Commits
 
-每次 commit 不仅是代码快照，更是**可追溯的决策记录**。后续的版本复盘、技术总结都可以直接引用 commit 内容。
+Every commit is not just a code snapshot but a **traceable decision record**. Release retrospectives and technical write-ups can quote commit content directly.
 
-**铁律：不能只有一行 `feat: xxx`，必须包含决策过程。**
+**Iron rule: a bare one-liner like `feat: xxx` is not enough — the decision process must be included.**
 
-#### 必填结构
+#### Required structure
 
 ```
-<type>: <一句话标题>
+<type>: <one-line title>
 
-- 背景：当时面临什么问题/需求？
-- 纠结：调研了哪些方案？各自的优劣是什么？
-- 决策：为什么最终选了这个方案？放弃了什么？
-- 坑与解决：实际执行中遇到了什么意外？怎么解决的？
-- 验证：怎么确认这个改动是对的？（命令 + 结果）
+- Background: what problem or need triggered this?
+- Dilemma: what options were researched? Pros and cons of each?
+- Decision: why was this option chosen? What was given up?
+- Pitfalls and fixes: what went unexpectedly during execution? How was it resolved?
+- Verification: how was the change confirmed correct? (command + result)
 ```
 
-#### 类型（type）
+#### Types
 
-| 类型 | 用途 | 示例 |
-|------|------|------|
-| `feat` | 新功能 | `feat: 添加语音输入与 LLM 语义归一化` |
-| `fix` | 修复 | `fix: 修复同一会话内更换机型不重新验证的问题` |
-| `docs` | 文档 | `docs: 重构 README，增加架构图和功能演示` |
-| `chore` | 依赖/配置/环境 | `chore: 引入 LangChain4j 1.14.1 + DeepSeek` |
-| `refactor` | 重构 | `refactor: 将机型验证逻辑从 Service 抽取为独立 Validator` |
-| `test` | 测试 | `test: 添加机型验证单元测试` |
+| Type | Purpose | Example |
+|------|---------|---------|
+| `feat` | New feature | `feat: add voice input and LLM semantic normalization` |
+| `fix` | Bug fix | `fix: re-validate aircraft model when it changes within a session` |
+| `docs` | Documentation | `docs: restructure README with architecture diagram and demo` |
+| `chore` | Dependencies/config/tooling | `chore: introduce LangChain4j 1.14.1 + DeepSeek` |
+| `refactor` | Refactoring | `refactor: extract aircraft-model validation from Service into a Validator` |
+| `test` | Tests | `test: add unit tests for model validation` |
 
-#### 好 vs 坏示例
+#### Good vs. bad examples
 
-**❌ 坏示例**（没有决策信息）：
+**❌ Bad** (no decision information):
 ```
-chore: 添加 LangChain4j 依赖
+chore: add LangChain4j dependency
 ```
 
-**✅ 好示例**（包含完整决策过程）：
+**✅ Good** (full decision process):
 ```
-chore: 引入 LangChain4j 1.14.1 + DeepSeek，弃用 DashScope
+chore: adopt LangChain4j 1.14.1 + DeepSeek, drop DashScope
 
-- 背景：需要接入 LLM 实现 RAG 问答，原方案计划用通义千问（DashScope）
-- 纠结：
-  1. 版本选择：原定 1.4.0，但调研发现无 patch 版本，稳定性存疑；
-     最终升到 1.14.1（有 patch 修复，且兼容 Spring Boot 3.5）
-  2. LLM 选型：机务手册是英文的，通义千问英文能力不如 DeepSeek；
-     且 langchain4j-dashscope 已迁移到 community 仓库，不在核心 BOM 中
-- 决策：
-  - LangChain4j 版本 → 1.14.1
-  - LLM → DeepSeek（英文强、成本低、国内稳定）
-  - 接入方式 → langchain4j-open-ai（OpenAI 兼容模式）
-- 坑与解决：
-  - 坑：用 langchain4j-bom 统一管理时 dashscope 报 version missing；
-    解决：弃用 dashscope，改用 open-ai（核心模块，BOM 全覆盖）
-- 验证：
-  - ./mvnw dependency:tree -Dincludes=dev.langchain4j → 无冲突
+- Background: needed an LLM for RAG Q&A; the original plan was Tongyi Qianwen (DashScope)
+- Dilemma:
+  1. Version: 1.4.0 was planned, but it has no patch releases and its stability was
+     doubtful; moved to 1.14.1 (has patch fixes, compatible with Spring Boot 3.5)
+  2. Model choice: maintenance manuals are in English, where Tongyi Qianwen trails
+     DeepSeek; also langchain4j-dashscope moved to the community repo and is no
+     longer in the core BOM
+- Decision:
+  - LangChain4j version → 1.14.1
+  - LLM → DeepSeek (strong English, low cost, stable domestic access)
+  - Integration → langchain4j-open-ai (OpenAI-compatible mode)
+- Pitfalls and fixes:
+  - Pitfall: with langchain4j-bom, dashscope reported "version missing"
+  - Fix: dropped dashscope, used open-ai (a core module fully covered by the BOM)
+- Verification:
+  - ./mvnw dependency:tree -Dincludes=dev.langchain4j → no conflicts
   - ./mvnw clean compile → BUILD SUCCESS
 ```
 
 ---
 
-## 代码审查清单
+## Code Review Checklist
 
-提交代码前，逐条自检：
+Self-check every item before submitting a pull request:
 
-### 功能正确性
+### Functional correctness
 
-- [ ] 新增功能是否覆盖了设计文档中的验收标准？
-- [ ] 边界条件是否处理（空值、超长输入、特殊字符）？
-- [ ] 错误处理是否完备（不会直接抛 500，而是返回有意义的错误信息）？
+- [ ] Does the new feature cover the acceptance criteria in the design document?
+- [ ] Are boundary conditions handled (null values, over-long input, special characters)?
+- [ ] Is error handling complete (meaningful error responses instead of raw 500s)?
 
-### 文档同步
+### Documentation sync
 
-- [ ] **API 文档**（`docs/API.md`）是否更新了新增/修改的接口？
-- [ ] **架构文档**（`docs/ARCHITECTURE.md`）是否反映了新的模块或数据流？
-- [ ] 接口是否有可直接复制运行的 **curl 示例**？
-- [ ] README 是否需要同步更新（如新增功能截图、调整快速开始步骤）？
+- [ ] Is **API documentation** (`docs/API.md`) updated for new/modified endpoints?
+- [ ] Does **architecture documentation** (`docs/ARCHITECTURE.md`) reflect new modules or data flows?
+- [ ] Does every endpoint have a **curl example** that can be copy-pasted and run?
+- [ ] Does the README need a sync (new screenshots, quick-start steps)?
 
-### 代码质量
+### Code quality
 
-- [ ] 是否有明显的重复代码？能否抽取复用？
-- [ ] 命名是否自解释（类名、方法名、变量名）？
-- [ ] 是否有适当的日志记录（非调试日志使用 `INFO`/`WARN`，调试日志使用 `DEBUG`）？
-- [ ] 虚拟线程场景下是否有阻塞操作未标记？（Java 21 Virtual Threads 中，`synchronized` 和 `Thread.sleep` 会 pin 住平台线程）
+- [ ] Is there obvious duplication? Can it be extracted for reuse?
+- [ ] Are names self-explanatory (class, method, variable)?
+- [ ] Is logging appropriate (INFO/WARN for operational logs, DEBUG for debug logs)?
+- [ ] On Java 21 virtual threads, are blocking operations identified? (`synchronized` and `Thread.sleep` pin platform threads)
 
-### 测试
+### Tests
 
-- [ ] 新增业务逻辑是否有单元测试？
-- [ ] 关键接口是否有集成测试（至少覆盖正常路径和主要异常路径）？
-- [ ] 手动验收：本地启动后，设计文档中的验收场景是否全部通过？
+- [ ] Does new business logic have unit tests?
+- [ ] Do key endpoints have integration tests (at least the happy path and the main error paths)?
+- [ ] Manual acceptance: after starting the app locally, do all acceptance scenarios from the design document pass?
 
-### 安全与合规
+### Security and compliance
 
-- [ ] 是否有敏感信息硬编码（API Key、密码、私钥）？
-- [ ] 新增依赖的许可证是否兼容（优先 Apache 2.0 / MIT，规避 GPL）？
-- [ ] 用户输入是否有基本的校验和过滤？
+- [ ] Any hard-coded secrets (API keys, passwords, private keys)?
+- [ ] Are licenses of new dependencies compatible (prefer Apache 2.0 / MIT, avoid GPL)?
+- [ ] Is user input validated and filtered?
 
 ---
 
-## 分支模型
+## Branch Model
 
-### 当前模式：主干开发（Trunk-Based Development）
+### Current: GitHub Flow (PR-based, enforced by CI)
+
+```
+main  ──────────/\──────────────────────/\──────────
+               /  \                    /  \
+              /    \                  /    \
+             /      \                /      \
+       feature/voice-input    fix/session-timeout
+```
+
+Enabled by the contribution-workflow setup (`.github/workflows/`):
+
+- Every change lands on `main` through a **pull request**; direct pushes to `main` should be reserved for trivial cases and still pass CI.
+- CI runs on every push and pull request to `main`:
+  - **ci-backend**: `./mvnw -B test` on Eclipse Temurin 21 (JDK 21) — blocking.
+  - **ci-frontend**: `npm ci`, `npm test`, `npm run build` — blocking; plus `npm audit`, informational on push/PR (`continue-on-error`) and allowed to fail for real only on the weekly scheduled run (Monday 00:00 UTC).
+- Branch naming: `feature/…`, `fix/…`, `docs/…`.
+- Before merging, the code review checklist above must be walked through.
+
+### Historical: trunk-based development (single-maintainer era)
+
+> Kept for reference only — this was the workflow before pull requests and CI were introduced, and it no longer describes current practice.
 
 ```
 main  ────────────────────────────────────────────
         ↑        ↑        ↑
       feat-1   feat-2   fix-1
-      (短命分支，1~2个 commit 即合并)
+      (short-lived branches, merged after 1–2 commits)
 ```
 
-适用场景：单兵作战，功能简单，快速迭代。
-
-规则：
-- 直接在 `main` 分支开发（或从 `main` 切短命功能分支，完成后立即合并）
-- 每个 commit 即为一个完整、可工作的状态
-- 禁止在 `main` 上保留未完成的代码（WIP commit 只允许在本地，push 前 squash）
-
-### 未来模式：GitHub Flow（多人协作时）
-
-```
-main  ────────────────────────────────────────────
-        \        /\        /
-         feature/voice-input
-         feature/admin-panel
-         fix/session-timeout
-```
-
-切换条件：项目有第二个协作者，或需要 Code Review 流程。
-
-规则：
-- 每个功能/修复从 `main` 切出独立分支
-- 分支命名规范：`feature/功能描述`、`fix/问题描述`、`docs/文档描述`
-- 通过 Pull Request 合并，合并前必须通过代码审查清单
+It applied when the project had a single maintainer, simple features, and fast iteration: short-lived branches merged straight into `main`, every commit a complete working state, and no WIP commits pushed (squash before pushing).
 
 ---
 
-*最后更新：2026-06-07*
+*Last updated: 2026-11-15*
