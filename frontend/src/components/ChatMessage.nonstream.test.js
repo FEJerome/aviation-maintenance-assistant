@@ -104,4 +104,17 @@ describe('ChatMessage non-streaming fallback rendering', () => {
     await nextTick()
     expect(root.querySelector('.message-content-markdown').textContent).toContain('第二版')
   })
+
+  it('marks user messages with the user row class that scopes the fallback styles', async () => {
+    const { root } = mountChatMessage({ role: 'user', content: '## 用户标题\n\n用户段落' })
+    await nextTick()
+
+    // The scoped Markdown styles intentionally target only
+    // `.message-row.system .message-content-markdown`; user bubbles must keep
+    // their inherited appearance. Guard both class anchors of that selector.
+    const userRow = root.querySelector('.message-row.user')
+    expect(userRow).not.toBeNull()
+    expect(userRow.querySelector('.message-content-markdown h2').textContent).toContain('用户标题')
+    expect(root.querySelector('.message-row.system')).toBeNull()
+  })
 })
