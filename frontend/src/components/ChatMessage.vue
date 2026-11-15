@@ -1,7 +1,7 @@
 <template>
   <div :class="['message-row', roleClass]">
     <div class="message-bubble">
-      <!-- 流式消息：已确认块 + 当前缓冲，DOM 结构在流式结束前后保持一致 -->
+      <!-- Streaming message: confirmed blocks + current buffer; DOM structure stays stable across completion -->
       <template v-if="hasStreamingContent">
         <div
           v-for="(block, index) in confirmedBlocks"
@@ -16,7 +16,7 @@
           {{ streamingBuffer }}
         </div>
       </template>
-      <!-- 非流式消息：兜底一次性渲染 -->
+      <!-- Non-streaming message: one-shot fallback rendering -->
       <div
         v-else
         class="message-content message-content-markdown"
@@ -89,81 +89,99 @@ const props = defineProps({
 const roleClass = computed(() => props.role === 'user' ? 'user' : 'system')
 
 /**
- * 已确认的段落块列表，每个元素为 { html: string }
+ * List of confirmed paragraph blocks, each shaped as { html: string }
  */
 const confirmedBlocks = ref([])
 
 /**
- * 当前正在流式接收中的纯文本缓冲
+ * Plain-text buffer for the content currently being streamed in
  */
 const streamingBuffer = ref('')
 
 /**
- * 记录上次已处理到的 content 索引，避免重复处理
+ * Index of the content already processed, to avoid reprocessing
  */
 let lastProcessedIndex = 0
 
 /**
- * 流式完成后的完整渲染（兜底路径，用于非流式消息）
+ * Full-content rendering after streaming completes (fallback path for non-streaming messages)
  */
 const renderedContent = computed(() => {
   return renderMarkdown(props.content)
 })
 
 /**
- * 是否使用流式渲染结构（已确认块 + 缓冲）。
- * 只要有已确认块或正在流式中，就使用该结构；否则使用兜底渲染。
+ * Whether to use the streaming render structure (confirmed blocks + buffer).
+ * Used whenever any block is confirmed or streaming is active; otherwise the
+ * fallback rendering is used.
  */
 const hasStreamingContent = computed(() => {
   return confirmedBlocks.value.length > 0 || props.isStreaming
 })
 
 /**
- * 监听 isStreaming 状态变化：开始/结束流式时重置或 flush 状态
+ * Append any content not yet consumed and confirm paragraph boundaries.
+ *
+ * Idempotent and consumes each byte of props.content exactly once:
+ * progress is tracked via lastProcessedIndex. Safe to call from both the
+ * content watcher and the completion watcher regardless of which one the
+ * scheduler runs first.
+ */
+function consumePendingContent() {
+  const newText = props.content.slice(lastProcessedIndex)
+  if (!newText) return
+
+  // Append to streamingBuffer
+  streamingBuffer.value += newText
+
+  // Try to find a paragraph boundary in streamingBuffer
+  const boundary = findParagraphBoundary(streamingBuffer.value)
+  if (boundary > 0) {
+    const completed = streamingBuffer.value.slice(0, boundary).trim()
+    const remaining = streamingBuffer.value.slice(boundary)
+
+    if (completed) {
+      const html = renderMarkdown(completed)
+      if (html && html.trim()) {
+        confirmedBlocks.value.push({ html })
+      }
+    }
+    streamingBuffer.value = remaining
+  }
+
+  lastProcessedIndex = props.content.length
+}
+
+/**
+ * Listen for isStreaming state transitions: starting a stream resets state,
+ * finishing it drains any content that arrived in the same tick as the
+ * completion event (see consumePendingContent) before flushing the buffer,
+ * so trailing Markdown is never dropped.
  */
 watch(() => props.isStreaming, (newVal, oldVal) => {
   if (newVal && !oldVal) {
-    // 开始流式：重置所有状态
+    // Streaming starts: reset all state
     confirmedBlocks.value = []
     streamingBuffer.value = ''
     lastProcessedIndex = 0
   } else if (!newVal && oldVal) {
-    // 结束流式：flush 剩余缓冲到已确认块，保持 DOM 结构稳定
+    // Streaming ends: consume content that arrived in the same tick first, then flush
+    consumePendingContent()
     finalizeStreamingContent(streamingBuffer, confirmedBlocks)
     lastProcessedIndex = 0
   }
 })
 
 /**
- * 监听 content 变化：增量处理新增内容
+ * Listen for content changes during streaming: incrementally process the
+ * newly arrived text. Content that arrives in the same tick as the
+ * completion event is consumed by the isStreaming watcher instead.
  */
 watch(
   () => props.content,
-  (newContent) => {
+  () => {
     if (!props.isStreaming) return
-
-    const newText = newContent.slice(lastProcessedIndex)
-    if (!newText) return
-
-    // 追加到 streamingBuffer
-    streamingBuffer.value += newText
-
-    // 尝试在 streamingBuffer 中找段落边界
-    const boundary = findParagraphBoundary(streamingBuffer.value)
-    if (boundary > 0) {
-      const completed = streamingBuffer.value.slice(0, boundary).trim()
-      const remaining = streamingBuffer.value.slice(boundary)
-
-      if (completed) {
-        const html = renderMarkdown(completed)
-        if (html && html.trim()) {
-          confirmedBlocks.value.push({ html })
-        }
-      }
-      streamingBuffer.value = remaining
-    }
-
-    lastProcessedIndex = newContent.length
+    consumePendingContent()
   },
   { flush: 'post' }
 )
@@ -210,7 +228,7 @@ watch(
   white-space: pre-wrap;
 }
 
-/* 已确认段落的 Markdown 样式 */
+/* Markdown styles for confirmed blocks */
 .message-block {
   margin-bottom: 8px;
 }
@@ -270,7 +288,7 @@ watch(
   color: #57606a;
 }
 
-/* 表格样式：边框 + 斑马线 */
+/* Table styles: borders + zebra striping */
 .message-block :deep(table) {
   width: 100%;
   border-collapse: collapse;
@@ -307,7 +325,7 @@ watch(
   text-decoration: underline;
 }
 
-/* 流式完成后的 Markdown 样式（兜底路径） */
+/* Markdown styles after streaming completes (fallback path) */
 .message-content-markdown h1,
 .message-content-markdown h2,
 .message-content-markdown h3 {
