@@ -226,11 +226,12 @@ Try the format-first quickstart corpus in [examples/quickstart/](examples/quicks
 │   ├── quickstart/          # Synthetic sample documents + quickstart guide
 │   └── aviation/            # Aviation reference-implementation notes
 ├── evals/                   # Evaluation assets
-│   └── aviation/            # Golden-set schema & evaluation guide (planned)
+│   └── aviation/            # Golden-set schema, 20-item set & evaluation guide
 ├── docker-compose.yml       # Docker Compose orchestration
 ├── DEPLOY.md                # Deployment guide
 ├── LICENSE                  # MIT License
 ├── scripts/                 # Test & utility scripts
+│   ├── eval/                # Golden-set evaluation harness
 │   └── tests/               # Manual/semi-automated acceptance scripts
 └── README.md                # This file
 ```
@@ -255,6 +256,17 @@ This repository **does not ship any real manuals**. The aviation reference imple
 
 ---
 
+## 📊 Evaluation
+
+A deterministic golden-set harness regression-checks the reference implementation on a fully loopback environment (fake LLM + isolated Chroma collection + local embeddings — no real model involved):
+
+- **Set**: 20 items over the three synthetic quickstart manuals, covering all six control-flow routes (`rag` / `validation_block` / `validation_unknown` / `clarify_model` / `no_answer` / `out_of_scope`) with English and Chinese questions — see [evals/aviation/](evals/aviation/).
+- **Checks**: L1 control-flow routing with zero-model-call assertions, L2 doc-level retrieval hit@5 / MRR / citation integrity, L3 answer structure (citation markers, fixed abstention notices).
+- **Gates**: route accuracy 100%, zero-call violations 0, no_answer false-answer rate 0, rag hit@5 100%, citations integrity 100% (MRR reported without a gate). Semantic/LLM-judged scoring is deferred to release acceptance.
+- **Runner**: [scripts/eval/run-golden-set.mjs](scripts/eval/run-golden-set.mjs) — zero-dependency, optional second pass over the read-only MCP endpoint; reports land in `docs/test-reports/`.
+
+---
+
 ## 🗺️ Roadmap
 
 | Item | Status | Notes |
@@ -263,7 +275,7 @@ This repository **does not ship any real manuals**. The aviation reference imple
 | BYOK: arbitrary OpenAI-compatible endpoint (base_url / api_key / model) | ✅ Available | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) |
 | PDF and Markdown ingestion with stable IDs | ✅ Available | Idempotent document versions |
 | Read-only MCP endpoint (`ask_maintenance_question` over streamable HTTP) | ✅ Available (opt-in) | Disabled by default; contract: [docs/MCP.md](docs/MCP.md) |
-| Golden-set evaluation harness (~20 aviation items) | 📋 Planned | Schema ready: [evals/aviation/](evals/aviation/); item body not yet authored |
+| Golden-set evaluation harness (20 aviation items, six routes, EN+ZH) | ✅ Available | Set: [evals/aviation/](evals/aviation/); runner: [scripts/eval/](scripts/eval/); loopback-only, not a required CI check |
 | English demo UI | 📋 Planned | Current UI is Chinese |
 
 ---

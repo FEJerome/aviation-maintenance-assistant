@@ -6,11 +6,11 @@
 
 ## English
 
-### Status: planned
+### Status: available
 
 - ✅ **Schema ready**: [golden-set.schema.json](golden-set.schema.json) — the agreed contract for evaluation items.
-- 📋 **Item body (~20 items)**: planned, not yet authored.
-- 📋 **Evaluation harness**: planned; no automated runner ships in the current version.
+- ✅ **Item body (20 items)**: [golden-set.json](golden-set.json) — covers all six routes with both `en` and `zh` questions, built on the three synthetic quickstart manuals (no real manuals, no corpus expansion).
+- ✅ **Evaluation harness**: [scripts/eval/run-golden-set.mjs](../../scripts/eval/run-golden-set.mjs) — zero-dependency loopback runner; usage and environment in [scripts/eval/README.md](../../scripts/eval/README.md).
 
 ### What this evaluation is for
 
@@ -63,24 +63,29 @@ The conditional requirement is enforced by a JSON Schema `if`/`then` rule in the
 4. **Honest abstention is a first-class case.** `no_answer` and `out_of_scope` items exist to catch fabrication; `expected_behavior` must state what an honest abstention looks like (e.g. "states the manual set does not cover this" rather than inventing a procedure).
 5. **Language balance.** The ~20 items should cover both `en` and `zh` questions, including at least a few cross-language cases (Chinese question over an English corpus).
 
-### Scoring concept (planned)
+### Scoring (implemented by the harness)
 
-- **Keypoint coverage** (`rag` items): fraction of `answer_keypoints` covered by the answer (LLM-as-judge or rubric-checked, exact method TBD).
-- **Route correctness** (all items): did the actual control flow match `expected_route`?
-- **Behavior conformance** (non-`rag` items): does the response satisfy `expected_behavior`?
-- **Citation presence** (`rag` items): does the answer name a source consistent with `source_locator.doc_title`?
+The runner evaluates three layers deterministically on loopback (fake LLM + isolated Chroma collection + local ONNX embeddings — no real model involved):
 
-Results are intended to be summarized per tag, so regressions in (say) `validation` or `no-answer` behavior are visible independently of general QA quality.
+- **L1 control flow**: actual outcome must equal the expected outcome, and short-circuit routes must not call the model (fake call counter: block/unknown/clarify = 0 calls; English no_answer/out_of_scope = 0; Chinese ≤ 1 translation call).
+- **L2 retrieval quality**: rag items must cite a `required_docs` document in their top-5 citations (doc-level hit@5; reciprocal rank feeds MRR); no_answer and out_of_scope items must return empty citations; citation field integrity is checked on every citation.
+- **L3 answer structure**: ANSWERED items need a non-empty reply with an `[S` citation marker and `degraded=false`; NO_ANSWER items must return the fixed not-found notice exactly.
+
+**Gates** (any failure exits non-zero): route accuracy 100%, zero-call violations 0, no_answer false-answer rate 0, rag doc-level hit@5 100%, citations integrity 100%. MRR is reported without a gate. Semantic scoring / LLM-as-judge over `answer_keypoints` is deliberately deferred to the release-acceptance milestone.
+
+**out_of_scope mapping**: the toolkit has no native out-of-scope route; `out_of_scope` items are evaluated against the honest-abstention `NO_ANSWER` outcome. This is a documented mapping, not a native product route.
+
+Results are summarized per route with a gate table, so regressions in (say) `validation` or `no-answer` behavior are visible independently of general QA quality. Per-tag breakdown is not produced by the current runner and is left as a future enhancement. An optional second pass exercises the same set through the read-only MCP endpoint (`EVAL_MCP_PASS=1`).
 
 ---
 
 ## 中文
 
-### 状态：planned（规划中）
+### 状态：available（可用）
 
 - ✅ **Schema 已就绪**：[golden-set.schema.json](golden-set.schema.json)——评测条目的约定契约。
-- 📋 **条目本体（约 20 条）**：规划中，尚未撰写。
-- 📋 **评测执行器**：规划中；当前版本不附带自动化运行器。
+- ✅ **条目本体（20 条）**：[golden-set.json](golden-set.json)——覆盖全部六种路由，含中英文问题，基于三篇合成 quickstart 手册（无真实手册、不扩展语料）。
+- ✅ **评测执行器**：[scripts/eval/run-golden-set.mjs](../../scripts/eval/run-golden-set.mjs)——零依赖 loopback 运行器；用法与环境见 [scripts/eval/README.md](../../scripts/eval/README.md)（英文）。
 
 ### 评测目的
 
@@ -133,11 +138,16 @@ Golden set 为航空参考实现提供**可复现的回归检查**：
 4. **诚实拒答是一等病例。** `no_answer` 与 `out_of_scope` 条目用于捕捉编造行为；`expected_behavior` 必须写明诚实的拒答长什么样（例如"说明手册集未覆盖该内容"，而不是编造程序）。
 5. **语言均衡。** 约 20 条条目应同时覆盖 `en` 和 `zh` 问题，并至少包含若干跨语言用例（中文问题检索英文语料）。
 
-### 评分概念（规划中）
+### 评分方式（执行器已实现）
 
-- **要点覆盖率**（`rag` 条目）：回答覆盖 `answer_keypoints` 的比例（LLM-as-judge 或 rubric 检查，具体方法待定）。
-- **路由正确性**（全部条目）：实际控制流是否与 `expected_route` 一致。
-- **行为符合性**（非 `rag` 条目）：响应是否满足 `expected_behavior`。
-- **引用存在性**（`rag` 条目）：回答是否标注了与 `source_locator.doc_title` 一致的来源。
+执行器在 loopback 环境（fake LLM＋隔离 Chroma collection＋本地 ONNX embedding，不接触真实模型）上确定性地评估三层：
 
-评测结果按 tag 汇总，使（例如）`validation` 或 `no-answer` 行为的回归能够独立于通用问答质量被观察到。
+- **L1 控制流**：实际 outcome 必须等于预期 outcome；短路路由不得调用模型（fake 调用计数：block/unknown/clarify=0 次；英文 no_answer/out_of_scope=0；中文 ≤1 次翻译调用）。
+- **L2 检索质量**：rag 条目的前 5 条 citations 必须命中 `required_docs` 文档（doc 级 hit@5；倒数排名计入 MRR）；no_answer 与 out_of_scope 条目的 citations 必须为空；逐条检查 citation 字段完整性。
+- **L3 回答结构**：ANSWERED 条目要求回复非空、含 `[S` 引用标记且 `degraded=false`；NO_ANSWER 条目必须精确返回固定的"未找到"文案。
+
+**门槛**（任一不过即非零退出）：路由正确率 100%、零调用违规 0、no_answer 误答率 0、rag doc 级 hit@5 100%、citations 完整性 100%。MRR 只报告不设门槛。基于 `answer_keypoints` 的语义评分／LLM 评审明确留待发布验收里程碑。
+
+**out_of_scope 映射说明**：产品没有原生 out_of_scope 路由；此类条目按诚实拒答的 `NO_ANSWER` outcome 评测。这是如实注明的映射，而非原生产品路由。
+
+结果按路由汇总并附门槛表，使（例如）`validation` 或 `no-answer` 行为的回归能独立于通用问答质量被观察到。当前执行器不产出按 tag 分片，留作后续增强。可选第二遍通过只读 MCP 端点重放同一评测集（`EVAL_MCP_PASS=1`）。

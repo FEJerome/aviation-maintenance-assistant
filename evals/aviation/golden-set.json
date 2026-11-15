@@ -1,0 +1,274 @@
+{
+  "dataset": "AMA Aviation Golden-Set",
+  "version": "1.0.0",
+  "schema": "golden-set.schema.json",
+  "corpus": "examples/quickstart synthetic samples (3 documents, fully invented content)",
+  "outcome_mapping": {
+    "rag": "ANSWERED",
+    "validation_block": "VALIDATION_BLOCKED",
+    "validation_unknown": "VALIDATION_UNKNOWN",
+    "clarify_model": "CLARIFICATION_REQUIRED",
+    "no_answer": "NO_ANSWER",
+    "out_of_scope": "NO_ANSWER"
+  },
+  "items": [
+    {
+      "id": "AVI-001",
+      "question": "For a CTLS with a Rotax 912, what is the oil capacity of the PWR-40S with the filter?",
+      "language": "en",
+      "aircraft_model": "CTLS",
+      "engine_model": "Rotax 912",
+      "expected_route": "rag",
+      "answer_keypoints": [
+        "States the total oil capacity including the filter (six quarts on the synthetic scale).",
+        "Makes clear the figure is the with-filter capacity, not the partial fill."
+      ],
+      "source_locator": {
+        "doc_title": "Piston Engine Oil Servicing (Synthetic Sample)",
+        "section_hint": "Section 2, Synthetic Specifications"
+      },
+      "required_docs": ["sample-engine-oil-check.md"],
+      "tags": ["engine", "citation"]
+    },
+    {
+      "id": "AVI-002",
+      "question": "For a CTLS with a Rotax 912 engine, how should I top up the oil on the PWR-40S?",
+      "language": "en",
+      "aircraft_model": "CTLS",
+      "engine_model": "Rotax 912",
+      "expected_route": "rag",
+      "answer_keypoints": [
+        "Adds oil gradually in half-quart steps, pausing between additions so the oil can settle.",
+        "Warns against filling past the upper dipstick mark.",
+        "Finishes by securing the filler cap and checking its latch indicator."
+      ],
+      "source_locator": {
+        "doc_title": "Piston Engine Oil Servicing (Synthetic Sample)",
+        "section_hint": "Section 4, Top-Up Procedure"
+      },
+      "required_docs": ["sample-engine-oil-check.md"],
+      "tags": ["engine", "citation"]
+    },
+    {
+      "id": "AVI-003",
+      "question": "For a CTLS with a Rotax 912, what cold inflation pressure should the landing gear tires have?",
+      "language": "en",
+      "aircraft_model": "CTLS",
+      "engine_model": "Rotax 912",
+      "expected_route": "rag",
+      "answer_keypoints": [
+        "Gives the nose tire cold pressure target (45 psi with a small tolerance).",
+        "Gives the main tire cold pressure target (50 psi with a small tolerance)."
+      ],
+      "source_locator": {
+        "doc_title": "Landing Gear Tire Inspection (Synthetic Sample)",
+        "section_hint": "Section 2, Synthetic Tire Data"
+      },
+      "required_docs": ["sample-tire-inspection.md"],
+      "tags": ["landing-gear", "citation"]
+    },
+    {
+      "id": "AVI-004",
+      "question": "What does the daily walk-around inspection cover before the first flight of the day?",
+      "language": "en",
+      "expected_route": "rag",
+      "answer_keypoints": [
+        "Covers propeller and spinner condition.",
+        "Covers windshield cleanliness and crack limits.",
+        "Covers wing leading edges, control surface movement, antennas and static ports."
+      ],
+      "source_locator": {
+        "doc_title": "Daily Inspection — Light Training Aircraft (Synthetic Sample)",
+        "section_hint": "Section 3, Walk-Around Checks"
+      },
+      "required_docs": ["sample-daily-inspection.md"],
+      "tags": ["general-knowledge", "citation"]
+    },
+    {
+      "id": "AVI-005",
+      "question": "CTLS 配 Rotax 912 发动机时，PWR-40S 的滑油加注程序是什么？",
+      "language": "zh",
+      "aircraft_model": "CTLS",
+      "engine_model": "Rotax 912",
+      "expected_route": "rag",
+      "answer_keypoints": [
+        "Adds oil gradually in half-quart steps, pausing between additions so the oil can settle.",
+        "Warns against filling past the upper dipstick mark.",
+        "Finishes by securing the filler cap and checking its latch indicator."
+      ],
+      "source_locator": {
+        "doc_title": "Piston Engine Oil Servicing (Synthetic Sample)",
+        "section_hint": "Section 4, Top-Up Procedure"
+      },
+      "required_docs": ["sample-engine-oil-check.md"],
+      "tags": ["engine", "cross-language", "citation"],
+      "notes": "Cross-language: the Chinese question is translated to English before retrieval, so one translation call plus one answer call is expected."
+    },
+    {
+      "id": "AVI-006",
+      "question": "SKY-100 每日检查的绕机项目有哪些？",
+      "language": "zh",
+      "expected_route": "rag",
+      "answer_keypoints": [
+        "Covers propeller and spinner condition.",
+        "Covers windshield cleanliness and crack limits.",
+        "Covers wing leading edges, control surface movement, antennas and static ports."
+      ],
+      "source_locator": {
+        "doc_title": "Daily Inspection — Light Training Aircraft (Synthetic Sample)",
+        "section_hint": "Section 3, Walk-Around Checks"
+      },
+      "required_docs": ["sample-daily-inspection.md"],
+      "tags": ["general-knowledge", "cross-language", "citation"],
+      "notes": "Cross-language: the Chinese question is translated to English before retrieval."
+    },
+    {
+      "id": "AVI-007",
+      "question": "CTLS 配 Rotax 912 时，起落架轮胎的磨损更换标准是什么？",
+      "language": "zh",
+      "aircraft_model": "CTLS",
+      "engine_model": "Rotax 912",
+      "expected_route": "rag",
+      "answer_keypoints": [
+        "States the minimum tread depth and that visible fabric requires replacement.",
+        "States the cut length and depth limits beyond which the tire is replaced.",
+        "Notes that sidewall cracks in the bead-to-shoulder zone and any flat spot are not permitted."
+      ],
+      "source_locator": {
+        "doc_title": "Landing Gear Tire Inspection (Synthetic Sample)",
+        "section_hint": "Section 4, Invented Wear and Damage Limits"
+      },
+      "required_docs": ["sample-tire-inspection.md"],
+      "tags": ["landing-gear", "cross-language", "citation"],
+      "notes": "Cross-language: the Chinese question is translated to English before retrieval."
+    },
+    {
+      "id": "AVI-008",
+      "question": "SKY-100 每日检查需要记录哪些内容？",
+      "language": "zh",
+      "expected_route": "rag",
+      "answer_keypoints": [
+        "Records the date and the inspector identifier in the logbook.",
+        "Records any discrepancies found, using the invented discrepancy codes in the D-100 range."
+      ],
+      "source_locator": {
+        "doc_title": "Daily Inspection — Light Training Aircraft (Synthetic Sample)",
+        "section_hint": "Section 5, Documentation"
+      },
+      "required_docs": ["sample-daily-inspection.md"],
+      "tags": ["general-knowledge", "cross-language", "citation"],
+      "notes": "Cross-language: the Chinese question is translated to English before retrieval."
+    },
+    {
+      "id": "AVI-009",
+      "question": "For a B737-800 with a PW1100G, what is the engine oil servicing interval?",
+      "language": "en",
+      "aircraft_model": "B737-800",
+      "engine_model": "PW1100G",
+      "expected_route": "validation_block",
+      "expected_behavior": "Deterministic interception: outcome VALIDATION_BLOCKED with the fixed mismatch notice, zero model calls, empty citations.",
+      "tags": ["engine", "validation"]
+    },
+    {
+      "id": "AVI-010",
+      "question": "CTLS 装 GE90-115B 发动机的滑油压力正常范围是多少？",
+      "language": "zh",
+      "aircraft_model": "CTLS",
+      "engine_model": "GE90-115B",
+      "expected_route": "validation_block",
+      "expected_behavior": "Deterministic interception: outcome VALIDATION_BLOCKED with the fixed mismatch notice, zero model calls, empty citations.",
+      "tags": ["engine", "validation", "cross-language"],
+      "notes": "Validation runs before query translation, so no translation call is expected either."
+    },
+    {
+      "id": "AVI-011",
+      "question": "For a B747-400 with a CFM56-7B, how do I check the engine oil level?",
+      "language": "en",
+      "aircraft_model": "B747-400",
+      "engine_model": "CFM56-7B",
+      "expected_route": "validation_unknown",
+      "expected_behavior": "Reports the combination is not in the built-in table: outcome VALIDATION_UNKNOWN with the fixed notice, zero model calls, empty citations.",
+      "tags": ["engine", "validation"]
+    },
+    {
+      "id": "AVI-012",
+      "question": "What is the normal engine oil pressure range in cruise?",
+      "language": "en",
+      "expected_route": "clarify_model",
+      "expected_behavior": "Asks for aircraft and engine information before answering: outcome CLARIFICATION_REQUIRED with the fixed clarification notice, zero model calls, empty citations.",
+      "tags": ["engine", "ambiguous"]
+    },
+    {
+      "id": "AVI-013",
+      "question": "起落架轮胎气压应该多久检查一次？",
+      "language": "zh",
+      "expected_route": "clarify_model",
+      "expected_behavior": "Asks for aircraft and engine information before answering: outcome CLARIFICATION_REQUIRED with the fixed clarification notice, zero model calls, empty citations.",
+      "tags": ["landing-gear", "ambiguous", "cross-language"],
+      "notes": "The clarification shortcut runs before query translation, so no model call is expected."
+    },
+    {
+      "id": "AVI-014",
+      "question": "How much does a SKY-100 cost?",
+      "language": "en",
+      "expected_route": "no_answer",
+      "expected_behavior": "Honest abstention: outcome NO_ANSWER with the fixed not-found notice, empty citations, no fabricated pricing.",
+      "tags": ["general-knowledge", "no-answer"],
+      "notes": "Verified against the synthetic quickstart corpus: retrieval returns no excerpts above the minimum score, so zero model calls are expected."
+    },
+    {
+      "id": "AVI-015",
+      "question": "How many seats does the SKY-100 have?",
+      "language": "en",
+      "expected_route": "no_answer",
+      "expected_behavior": "Honest abstention: outcome NO_ANSWER with the fixed not-found notice, empty citations, no fabricated seat count.",
+      "tags": ["general-knowledge", "no-answer"],
+      "notes": "Verified against the synthetic quickstart corpus: retrieval returns no excerpts above the minimum score, so zero model calls are expected."
+    },
+    {
+      "id": "AVI-016",
+      "question": "SKY-100 的售价是多少？",
+      "language": "zh",
+      "expected_route": "no_answer",
+      "expected_behavior": "Honest abstention: outcome NO_ANSWER with the fixed not-found notice, empty citations, no fabricated pricing.",
+      "tags": ["general-knowledge", "no-answer", "cross-language"],
+      "notes": "Cross-language: one translation call is expected, then retrieval returns nothing above the minimum score (verified against the synthetic quickstart corpus)."
+    },
+    {
+      "id": "AVI-017",
+      "question": "SKY-100 有几个座位？",
+      "language": "zh",
+      "expected_route": "no_answer",
+      "expected_behavior": "Honest abstention: outcome NO_ANSWER with the fixed not-found notice, empty citations, no fabricated seat count.",
+      "tags": ["general-knowledge", "no-answer", "cross-language"],
+      "notes": "Cross-language: one translation call is expected, then retrieval returns nothing above the minimum score (verified against the synthetic quickstart corpus)."
+    },
+    {
+      "id": "AVI-018",
+      "question": "What's a good recipe for sourdough bread?",
+      "language": "en",
+      "expected_route": "out_of_scope",
+      "expected_behavior": "The toolkit has no native out-of-scope route; the expected outcome is NO_ANSWER (a documented mapping, not a native route) with the fixed not-found notice and no fabricated answer.",
+      "tags": ["out-of-scope"],
+      "notes": "out_of_scope is evaluated against the NO_ANSWER outcome — a mapping, not a native product route. Zero model calls expected."
+    },
+    {
+      "id": "AVI-019",
+      "question": "Who won the World Cup final in 2022?",
+      "language": "en",
+      "expected_route": "out_of_scope",
+      "expected_behavior": "The toolkit has no native out-of-scope route; the expected outcome is NO_ANSWER (a documented mapping, not a native route) with the fixed not-found notice and no fabricated answer.",
+      "tags": ["out-of-scope"],
+      "notes": "out_of_scope is evaluated against the NO_ANSWER outcome — a mapping, not a native product route. Zero model calls expected."
+    },
+    {
+      "id": "AVI-020",
+      "question": "明天上海的天气怎么样？",
+      "language": "zh",
+      "expected_route": "out_of_scope",
+      "expected_behavior": "The toolkit has no native out-of-scope route; the expected outcome is NO_ANSWER (a documented mapping, not a native route) with the fixed not-found notice and no fabricated answer.",
+      "tags": ["out-of-scope", "cross-language"],
+      "notes": "out_of_scope is evaluated against the NO_ANSWER outcome — a mapping, not a native product route. One translation call is expected, then retrieval returns nothing."
+    }
+  ]
+}

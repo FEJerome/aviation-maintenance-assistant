@@ -1,9 +1,39 @@
 import http from 'node:http'
+import fs from 'node:fs'
 
 const port = Number(process.env.PORT || 18089)
 let calls = 0
 let mode = 'ok'
 let lastRequest = null
+
+// Deterministic translation support: when the backend sends its fixed translation
+// prompt (TranslationQueryTransformer), answer with a fixed English translation from
+// FAKE_TRANSLATION_MAP (JSON: { "<question>": "<translation>" }). Unmapped questions
+// are echoed back unchanged, keeping behavior deterministic. Regular chat requests
+// are unaffected.
+const TRANSLATION_PROMPT_PREFIX = 'You are an aviation maintenance translation specialist.'
+const QUESTION_MARKER = 'User question: '
+let translationMap = {}
+if (process.env.FAKE_TRANSLATION_MAP) {
+  try {
+    translationMap = JSON.parse(fs.readFileSync(process.env.FAKE_TRANSLATION_MAP, 'utf8'))
+  } catch {
+    translationMap = {}
+  }
+}
+
+function translationFor(payload) {
+  const messages = payload && payload.messages
+  if (!Array.isArray(messages)) return null
+  const lastUser = [...messages].reverse().find(
+    message => message && message.role === 'user' && typeof message.content === 'string'
+  )
+  if (!lastUser || !lastUser.content.startsWith(TRANSLATION_PROMPT_PREFIX)) return null
+  const markerIndex = lastUser.content.lastIndexOf(QUESTION_MARKER)
+  if (markerIndex < 0) return null
+  const question = lastUser.content.slice(markerIndex + QUESTION_MARKER.length).trim()
+  return Object.hasOwn(translationMap, question) ? translationMap[question] : question
+}
 
 function json(response, status, body) {
   response.writeHead(status, { 'Content-Type': 'application/json' })
@@ -59,6 +89,12 @@ const server = http.createServer((request, response) => {
 
     if (mode === 'http400') {
       json(response, 400, { error: { message: 'synthetic provider detail' } })
+      return
+    }
+
+    const translated = translationFor(payload)
+    if (translated !== null) {
+      json(response, 200, completion(translated))
       return
     }
 
