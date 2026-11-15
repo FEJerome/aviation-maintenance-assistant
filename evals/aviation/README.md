@@ -75,7 +75,7 @@ The runner evaluates three layers deterministically on loopback (fake LLM + isol
 
 **out_of_scope mapping**: the toolkit has no native out-of-scope route; `out_of_scope` items are evaluated against the honest-abstention `NO_ANSWER` outcome. This is a documented mapping, not a native product route.
 
-Results are summarized per route and per tag, so regressions in (say) `validation` or `no-answer` behavior are visible independently of general QA quality. An optional second pass exercises the same set through the read-only MCP endpoint (`EVAL_MCP_PASS=1`).
+Results are summarized per route with a gate table, so regressions in (say) `validation` or `no-answer` behavior are visible independently of general QA quality. Per-tag breakdown is not produced by the current runner and is left as a future enhancement. An optional second pass exercises the same set through the read-only MCP endpoint (`EVAL_MCP_PASS=1`).
 
 ---
 
