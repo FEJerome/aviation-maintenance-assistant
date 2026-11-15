@@ -61,7 +61,7 @@ MCP 服务通过 streamable HTTP 暴露单一只读工具 `ask_maintenance_quest
 
 | 变量 | 默认值 | 契约 |
 |---|---|---|
-| `AMA_MCP_ENABLED` | `false` | 总开关；为 `false` 时不注册端点（404）。 |
+| `AMA_MCP_ENABLED` | `false` | 总开关；为 `false` 时不注册端点（404）。解析为 `spring.ai.mcp.server.enabled`，安全链以该有效开关键定。 |
 | `AMA_MCP_AUTH_TOKEN` | *（空）* | 启用时必填（≥ 16 字符），否则启动 fail-closed。仅 Bearer 鉴权，常量时间比较，绝不记日志。 |
 | `AMA_MCP_PATH` | `/mcp` | 端点路径；必须以 `/` 开头。 |
 

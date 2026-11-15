@@ -113,6 +113,20 @@ class RateLimitFilterTest {
     }
 
     @Test
+    void similarButDistinctPathDoesNotJoinTheBucket() throws Exception {
+        RateLimitFilter filter = filter(1, true, false);
+        filter.doFilter(request("/mcp", "127.0.0.1", null),
+                new MockHttpServletResponse(), new MockFilterChain());
+        MockHttpServletResponse similar = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request("/mcp2", "127.0.0.1", null), similar, chain);
+
+        assertThat(similar.getStatus()).isEqualTo(200);
+        assertThat(chain.getRequest()).isNotNull();
+    }
+
+    @Test
     void customMcpPathIsRateLimited() throws Exception {
         RateLimitProperties properties = new RateLimitProperties();
         properties.setCapacity(1);

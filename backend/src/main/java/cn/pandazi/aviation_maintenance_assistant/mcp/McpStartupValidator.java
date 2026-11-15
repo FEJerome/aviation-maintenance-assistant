@@ -4,28 +4,36 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
- * Fails closed at startup when the read-only MCP endpoint is enabled without a usable
- * auth token. The token value itself is never logged.
+ * Fails closed at startup when the read-only MCP endpoint is effectively enabled without a
+ * usable auth token. The effective switch is {@code spring.ai.mcp.server.enabled} — the same
+ * property that registers the transport — so a guard bypass requires disabling the endpoint
+ * itself, in any property source. The token value is never logged.
  */
 @Component
 public class McpStartupValidator implements ApplicationRunner {
 
     static final int MIN_AUTH_TOKEN_LENGTH = 16;
 
+    static final String SERVER_ENABLED_PROPERTY = "spring.ai.mcp.server.enabled";
+
     private static final Logger log = LoggerFactory.getLogger(McpStartupValidator.class);
 
     private final McpProperties properties;
+    private final Environment environment;
 
-    public McpStartupValidator(McpProperties properties) {
+    public McpStartupValidator(McpProperties properties, Environment environment) {
         this.properties = properties;
+        this.environment = environment;
     }
 
     @Override
     public void run(ApplicationArguments args) {
-        if (!properties.isEnabled()) {
+        Boolean serverEnabled = environment.getProperty(SERVER_ENABLED_PROPERTY, Boolean.class);
+        if (!Boolean.TRUE.equals(serverEnabled)) {
             return;
         }
         String token = properties.getAuthToken();

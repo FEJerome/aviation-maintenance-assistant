@@ -79,7 +79,9 @@ Invalid input (blank or over-long `question`, malformed `conversationId`) return
 **Outcome semantics** mirror `/api/chat`: missing aircraft information asks for
 clarification without calling the model; unknown or mismatched model/engine pairs are
 blocked without calling the model; zero retrieval hits answer with `NO_ANSWER` without
-calling the model.
+calling the model. `QUOTA_EXHAUSTED` is deliberately **not** a normal outcome: the daily
+quota is reserved before the model call, and exhausting it fails the call, so it surfaces
+as `isError: true` with code `QUOTA_EXHAUSTED` (mirroring the HTTP 429 error contract).
 
 **Model and infrastructure failures** return `isError: true` whose text carries only a safe
 semantic code (e.g. `QUOTA_EXHAUSTED`, `LLM_TIMEOUT`, `LLM_UNAVAILABLE`) plus `traceId` —

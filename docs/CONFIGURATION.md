@@ -61,7 +61,7 @@ The MCP server exposes one read-only tool, `ask_maintenance_question`, over stre
 
 | Variable | Default | Contract |
 |---|---|---|
-| `AMA_MCP_ENABLED` | `false` | Master switch; when `false` the endpoint is not registered (404). |
+| `AMA_MCP_ENABLED` | `false` | Master switch; when `false` the endpoint is not registered (404). Resolved into `spring.ai.mcp.server.enabled`, which is the property the security chain actually keys on. |
 | `AMA_MCP_AUTH_TOKEN` | *(empty)* | Required when enabled (≥ 16 characters); startup fails closed otherwise. Bearer-only, constant-time comparison, never logged. |
 | `AMA_MCP_PATH` | `/mcp` | Endpoint path; must start with `/`. |
 

@@ -1,7 +1,8 @@
 package cn.pandazi.aviation_maintenance_assistant.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.bucket4j.Bandwidth;import io.github.bucket4j.Bucket;
+import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Refill;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -80,7 +81,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return true;
         }
         String mcpPath = this.mcpPath;
-        return mcpPath != null && !mcpPath.isBlank() && path.startsWith(mcpPath);
+        return mcpPath != null && !mcpPath.isBlank() && path.equals(mcpPath);
     }
 
     private Duration parsePeriod() {

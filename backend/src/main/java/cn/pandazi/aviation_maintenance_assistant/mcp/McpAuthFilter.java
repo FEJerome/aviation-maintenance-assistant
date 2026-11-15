@@ -94,8 +94,14 @@ public class McpAuthFilter extends OncePerRequestFilter {
         objectMapper.writeValue(response.getWriter(), body);
     }
 
+    /**
+     * Registers the guard only when the MCP transport itself is effectively enabled. The
+     * security decision tracks {@code spring.ai.mcp.server.enabled} (the property that
+     * actually registers the endpoint), so overriding that property in any property
+     * source still puts this filter in front of the transport.
+     */
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnProperty(prefix = "ama.mcp", name = "enabled", havingValue = "true")
+    @ConditionalOnProperty(prefix = "spring.ai.mcp.server", name = "enabled", havingValue = "true")
     static class McpAuthFilterConfiguration {
 
         @Bean
