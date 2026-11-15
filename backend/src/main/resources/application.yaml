@@ -10,9 +10,9 @@ spring:
   ai:
     mcp:
       server:
-        # Disabled unless explicitly enabled. AMA_MCP_ENABLED is the primary switch;
-        # ama.mcp.enabled works as a plain property entry point for the same switch.
-        enabled: ${AMA_MCP_ENABLED:${ama.mcp.enabled:false}}
+        # Disabled unless explicitly enabled. This is the effective security switch;
+        # ama.mcp.enabled below remains the user-facing entry bound to the same env var.
+        enabled: ${AMA_MCP_ENABLED:false}
         name: ${spring.application.name}
         protocol: STREAMABLE
         streamable-http:

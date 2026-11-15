@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -23,6 +24,19 @@ class McpEndpointDisabledTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @Autowired
+    private Environment environment;
+
+    @Test
+    void defaultContextResolvesTheServerSwitchToDisabled() {
+        // Placeholder resolution without AMA_MCP_ENABLED: the effective security switch
+        // and the user-facing entry both default to false.
+        assertThat(environment.getProperty("spring.ai.mcp.server.enabled", Boolean.class))
+                .isFalse();
+        assertThat(environment.getProperty("ama.mcp.enabled", Boolean.class)).isFalse();
+        assertThat(environment.getProperty("ama.mcp.path")).isEqualTo("/mcp");
+    }
 
     @Test
     void mcpEndpointIsNotFoundWhenDisabled() {

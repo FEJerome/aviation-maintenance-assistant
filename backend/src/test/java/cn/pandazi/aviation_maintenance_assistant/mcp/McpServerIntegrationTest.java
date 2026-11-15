@@ -41,9 +41,8 @@ import static org.mockito.Mockito.when;
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
-                "ama.mcp.enabled=true",
+                "AMA_MCP_ENABLED=true",
                 "ama.mcp.auth-token=test-mcp-token-0123456789",
-                "spring.ai.mcp.server.enabled=true",
                 "ama.llm.quota-enabled=true",
                 "ama.llm.daily-quota=1",
                 "ama.state-path=./build/test-state-mcp-integration",

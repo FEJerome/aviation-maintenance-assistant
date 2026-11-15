@@ -33,7 +33,7 @@ class McpAuthFilterRegistrationTest {
     @Test
     void filterConditionIgnoresTheAmaEntryPointProperty() {
         // The registration condition reads the effective server switch only; in a real
-        // application the yaml joins ama.mcp.enabled into it before conditions evaluate.
+        // application both switches are joined through the AMA_MCP_ENABLED placeholder.
         contextRunner
                 .withPropertyValues("ama.mcp.enabled=true")
                 .run(context -> assertThat(context)
