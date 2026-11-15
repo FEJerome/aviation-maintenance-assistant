@@ -58,7 +58,9 @@ Issues, pull requests, commit messages, and documentation are public.
   Report vulnerabilities through GitHub's private vulnerability reporting
   where available, or contact the maintainer directly; public discussion is
   limited to the fixed release.
-- All public documentation and templates are written in English.
+- Issue and pull request templates, and the contribution workflow, use
+  English. User-facing documentation may be bilingual (English and
+  Simplified Chinese).
 
 ## AI-assisted development
 
@@ -66,8 +68,9 @@ This project uses AI-assisted development as part of its workflow.
 The approved disclosure statement is:
 
 > Development on this repository is carried out with Claude Code as an
-> agentic development harness, using official models including Kimi
-> K3.1 Pro, Kimi K3, Kimi K2.8 Preview, and DeepSeek-V4.1-Flash-1017.
+> agentic development harness, using official models from their
+> respective providers, including Kimi K3.1 Pro, Kimi K3, Kimi
+> K2.8 Preview, and DeepSeek-V4.1-Flash-1017.
 > These are development tools, not runtime dependencies of the product.
 > The model is chosen per task by the maintainer's workflow. The
 > maintainer supervises and approves the design, verification,
