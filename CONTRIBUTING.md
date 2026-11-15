@@ -47,8 +47,10 @@ by the maintainer only after the checks have passed on a real pull request.
 
 Issues, pull requests, commit messages, and documentation are public.
 
-- No personal names or private project codenames; keep authorship to the
-  repository's configured git author.
+- No internal persona names, private project codenames, or internal
+  session/planning identifiers. Maintainer authorship stays under the
+  repository's configured, real-name git author; this rule does not
+  restrict that public authorship.
 - No private planning references, internal hostnames, intranet addresses, or
   incident post-mortem details.
 - No real credentials. Redact logs before attaching them.
@@ -60,20 +62,28 @@ Issues, pull requests, commit messages, and documentation are public.
 
 ## AI-assisted development
 
-This project uses AI coding tools as part of its development workflow.
+This project uses AI-assisted development as part of its workflow.
+The approved disclosure statement is:
 
-- Tools such as Claude Code, Kimi, and DeepSeek are **development tools**,
-  not runtime dependencies of the product; the running assistant stack does
-  not depend on any specific model provider.
-- The model/tool is chosen per task by the maintainer's workflow.
-- The maintainer supervises and approves the design, verification,
-  independent review, and merge of every change. AI-generated output is
-  always verified with the local test commands above before a pull request
-  is opened.
-- Independent AI-assisted review is disclosed as such and appears as a
-  substantive pull request comment (what was checked, findings, resolution).
-  It is never presented as external human review, and it does not replace
-  maintainer approval.
+> Development on this repository is carried out with Claude Code as an
+> agentic development harness, using official models including Kimi
+> K3.1 Pro, Kimi K3, Kimi K2.8 Preview, and DeepSeek-V4.1-Flash-1017.
+> These are development tools, not runtime dependencies of the product.
+> The model is chosen per task by the maintainer's workflow. The
+> maintainer supervises and approves the design, verification,
+> independent review, and merge of every change. Independent AI-assisted
+> review is presented as a substantive pull request comment — what was
+> checked, findings, and resolution — and is never passed off as
+> external human review.
+
+Supplementary notes:
+
+- The tools above are **development tools**, not runtime dependencies;
+  the running assistant stack does not depend on any specific model
+  provider.
+- AI-generated output is always verified with the local test commands
+  above before a pull request is opened.
+- Independent AI-assisted review does not replace maintainer approval.
 
 ## Commit conventions
 
