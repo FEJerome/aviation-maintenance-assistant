@@ -1,55 +1,56 @@
-# 架构说明
+# Architecture
 
-## 单体内边界
+## Monolith Internal Boundaries
 
-HTTP/Vue 应用壳进入机务 composition layer，再进入通用 grounded 内核。通用内核不 import 机型、发动机或机务会话类；不采用插件注册、动态领域加载或独立 Maven 模块。
+The HTTP/Vue application shell enters the aviation-maintenance composition layer, which in turn drives the generic grounded kernel. The generic kernel never imports aircraft, engine, or maintenance-session classes; there is no plugin registry, dynamic domain loading, or separate Maven module.
 
 ```text
 ChatController
   -> MaintenanceChatService
-     - 每轮确定性路由、显式信息提取、机型/发动机重验、会话
+     - deterministic per-turn routing, explicit information extraction,
+       aircraft/engine re-validation, sessions
      - AviationPrompt
      -> GroundedChatService
         -> RetrievalService
-           -> QueryTransformer（机务中文翻译）
-           -> ChromaDB + 本地 MiniLM
+           -> QueryTransformer (aviation Chinese-to-English translation)
+           -> ChromaDB + local MiniLM
         -> LlmCallExecutor
            -> OpenAI-compatible blocking / streaming clients
 ```
 
-## 配置与模型调用
+## Configuration and Model Invocation
 
-`AmaProperties` 绑定 AMA 配置。`LlmSettingsResolver` 只解析一次，通用三连接项优先且缺项不混用，旧 `DEEPSEEK_API_KEY` 只在云模式提供迁移映射。`LocalOnlyEndpointGuard` 在启动时检查 LLM 与 Chroma 的全部解析地址，link-local 默认拒绝；它不是网络沙箱。
+`AmaProperties` binds all AMA configuration. `LlmSettingsResolver` resolves once, giving the generic connection triple precedence without mixing partial fallbacks; the legacy `DEEPSEEK_API_KEY` is only mapped as a migration path in cloud mode. `LocalOnlyEndpointGuard` checks every resolved LLM and Chroma address at startup, rejecting link-local addresses by default; it is not a network sandbox.
 
-`OpenAiConfig` 用同一 resolved settings 创建 blocking/streaming client，不自动补 `/v1`，不发送未配置的 temperature，blocking 设置 `maxRetries(0)`。`LlmCallExecutor` 是聊天、流式和翻译的唯一调用边界，每次 attempt 在调用前预留配额。当前 streaming 实现直接执行请求，fake 失败测试验证只调用一次；运行中失败不切 provider 或 blocking 重试。
+`OpenAiConfig` builds the blocking/streaming clients from the same resolved settings: it never auto-appends `/v1`, never sends an unconfigured temperature, and sets `maxRetries(0)` on the blocking client. `LlmCallExecutor` is the single call boundary for chat, streaming, and translation; it reserves quota before every attempt. The current streaming implementation executes the request directly — the fake-failure tests verify it is called exactly once — and a mid-run failure neither switches provider nor falls back to blocking retry.
 
-## 摄入与稳定 ID
+## Ingestion and Stable IDs
 
-`DocumentIngestionService` 使用 `SourceDocumentParser` 明确区分 PDF/Tika 与 Markdown/UTF-8。只扫描当前层，按文件名排序，同内容别名只处理第一份。
+`DocumentIngestionService` uses `SourceDocumentParser` to keep PDF/Tika parsing strictly separate from Markdown/UTF-8 parsing. It scans only the current level, sorts by file name, and processes only the first of any content-identical aliases.
 
-- `document_id = doc_ + SHA-256(raw bytes)`。
-- `excerpt_id = exr_ + SHA-256(document_id + chunker version + chunk index + exact text)`。
-- `embedding_id = excerpt_id`。
-- chunker 固定为 `recursive-500-50-v1`。
+- `document_id = doc_ + SHA-256(raw bytes)`
+- `excerpt_id = exr_ + SHA-256(document_id + chunker version + chunk index + exact text)`
+- `embedding_id = excerpt_id`
+- The chunker is pinned to `recursive-500-50-v1`.
 
-每段保存 document/excerpt/title/source/hash/media/chunk/version/time metadata，不保存绝对路径，也不承诺 page/section。写入前按 `document_id` 清理同版本，再按稳定 ID 全量写入。Chroma 写入不是事务，失败报告后，下一次同版本清理可收敛。改字节产生新版本，旧版本默认保留；完整替换使用新 collection。
+Every chunk stores document/excerpt/title/source/hash/media/chunk/version/time metadata — never absolute paths — and makes no promises about page or section granularity. Before writing, the same-version chunks are cleared by `document_id`, then everything is written wholesale under stable IDs. Chroma writes are not transactional; after a failure is reported, the next same-version cleanup converges. Changing bytes produces a new version while old versions are retained by default; full replacement uses a new collection.
 
-## 检索、引用与无答案
+## Retrieval, Citations, and No-Answer
 
-`RetrievalService` 显式执行 query transform 和 retrieve，返回稳定 ID、文档名、chunk 序号、score 与文本。缺失稳定 metadata 是明确错误，不随机生成 citation。
+`RetrievalService` explicitly performs query transformation and retrieval, returning stable IDs, document names, chunk indices, scores, and text. Missing stable metadata is a hard error — citations are never generated at random.
 
-`GroundedChatService` 将片段按 `[S#]` 注入 prompt，并返回实际注入的 citations。citations 不是逐句事实验证。空命中直接 `NO_ANSWER`，不调用生成模型；中文查询此前可能已发生一次翻译 attempt。
+`GroundedChatService` injects the excerpts into the prompt tagged `[S#]` and returns the citations actually injected. Citations are not per-sentence fact verification. Empty hits short-circuit straight to `NO_ANSWER` without invoking the generation model; for Chinese queries, one translation attempt may already have occurred by then.
 
-流式关闭时只进行一次 blocking 调用并标记 `STREAMING_DISABLED`。流式运行中失败发送安全 error，不自动重试。
+When streaming is disabled, exactly one blocking call is made and marked `STREAMING_DISABLED`. A mid-run streaming failure sends a safe error and is not retried automatically.
 
-## 机务准入
+## Aviation Admission Control
 
-`MaintenanceChatService.prepare` 每轮先路由。关键问题合并本轮显式值与另一方已验证会话值，再重新 validate；MATCH 才更新会话，MISMATCH/UNKNOWN 阻断且不覆盖旧会话。缺少信息直接追问，不默认猜发动机。通用问题不注入旧机型上下文。blocking 与 streaming 使用同一 prepare 结果。
+`MaintenanceChatService.prepare` routes every turn first. For key questions it merges this turn's explicit values with the other party's already-validated session values, then re-validates: only MATCH updates the session; MISMATCH/UNKNOWN blocks the answer and never overwrites the old session state. Missing information triggers a follow-up question — the engine is never guessed by default. Generic questions do not inject stale model context. Blocking and streaming share the same prepare result.
 
-## API、安全与状态
+## API, Security, and State
 
-正常业务返回 200 和 additive ChatResponse；基础设施错误使用安全 HTTP/SSE error。每个请求有随机 traceId，日志只允许 trace/outcome/errorCode/耗时/数量/稳定 ID 等安全字段，不记录 key、原始问题、prompt、手册正文或 provider body。
+Normal business responses return 200 with an additive ChatResponse; infrastructure failures use a safe HTTP/SSE error. Every request carries a random traceId, and logs may contain only safe fields — trace/outcome/errorCode/duration/counts/stable IDs — never keys, raw questions, prompts, manual text, or provider bodies.
 
-限流和配额可显式关闭。默认不信任 forwarded headers；只有受控代理且 backend 不可直连时才启用。会话为单实例内存 LRU，配额为单实例 UTC 文件状态，不支持多副本。
+Rate limiting and quota enforcement can be explicitly disabled. Forwarded headers are distrusted by default; enable them only behind a controlled proxy with no direct backend access. Sessions are a single-instance in-memory LRU, and quota state is a single-instance UTC file — neither supports multi-replica deployment.
 
-MCP、golden-set 执行器和完整持久化 trace 仍为后续能力。
+The MCP server, the golden-set executor, and full persistent tracing remain future capabilities.
