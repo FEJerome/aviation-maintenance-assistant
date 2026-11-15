@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { createApp, h, reactive, nextTick } from 'vue'
 import ChatMessage from './ChatMessage.vue'
+import { i18n } from '../i18n/index.js'
 
 /**
  * Component-level regression tests for the incremental streaming race
@@ -44,6 +45,7 @@ function mountChatMessage() {
   const app = createApp({
     render: () => h(ChatMessage, props)
   })
+  app.use(i18n)
   app.mount(root)
 
   mountedApps.push({ app, root })
