@@ -1,5 +1,5 @@
 # 阶段一：构建前端生产包
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
