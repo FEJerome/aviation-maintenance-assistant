@@ -55,4 +55,18 @@ The quota file is `AMA_STATE_PATH/daily-llm-quota.json`. It uses UTC dates and s
 
 Blocking and streaming generation use the same executor. The blocking client sets `maxRetries(0)`; the current streaming implementation has no retry wrapper, and fake endpoint tests assert one request on failure. Neither path falls back to another provider, model, URL, or blocking request after a streaming failure.
 
-MCP tools, golden-set execution, and downloadable persistent traces remain planned capabilities.
+## Read-only MCP endpoint (opt-in)
+
+The MCP server exposes one read-only tool, `ask_maintenance_question`, over streamable HTTP. It is disabled by default and shares the per-IP rate-limit bucket with `/api/chat`. Full contract: [MCP.md](MCP.md).
+
+| Variable | Default | Contract |
+|---|---|---|
+| `AMA_MCP_ENABLED` | `false` | Master switch; when `false` the endpoint is not registered (404). Resolved into `spring.ai.mcp.server.enabled`, which is the property the security chain actually keys on. |
+| `AMA_MCP_AUTH_TOKEN` | *(empty)* | Required when enabled (≥ 16 characters); startup fails closed otherwise. Bearer-only, constant-time comparison, never logged. |
+| `AMA_MCP_PATH` | `/mcp` | Endpoint path; must start with `/`. |
+
+The MCP authorization filter accepts only loopback remote addresses and permanently ignores
+forwarded headers, independent of `AMA_TRUST_PROXY_HEADERS`. Deploying behind a proxy or
+container network makes the remote address non-loopback; use local port forwarding instead.
+
+Golden-set execution and downloadable persistent traces remain planned capabilities.

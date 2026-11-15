@@ -1,0 +1,53 @@
+package cn.pandazi.aviation_maintenance_assistant.mcp;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
+
+/**
+ * Fails closed at startup when the read-only MCP endpoint is effectively enabled without a
+ * usable auth token. The effective switch is {@code spring.ai.mcp.server.enabled} — the same
+ * property that registers the transport — so a guard bypass requires disabling the endpoint
+ * itself, in any property source. The token value is never logged.
+ */
+@Component
+public class McpStartupValidator implements ApplicationRunner {
+
+    static final int MIN_AUTH_TOKEN_LENGTH = 16;
+
+    static final String SERVER_ENABLED_PROPERTY = "spring.ai.mcp.server.enabled";
+
+    private static final Logger log = LoggerFactory.getLogger(McpStartupValidator.class);
+
+    private final McpProperties properties;
+    private final Environment environment;
+
+    public McpStartupValidator(McpProperties properties, Environment environment) {
+        this.properties = properties;
+        this.environment = environment;
+    }
+
+    @Override
+    public void run(ApplicationArguments args) {
+        Boolean serverEnabled = environment.getProperty(SERVER_ENABLED_PROPERTY, Boolean.class);
+        if (!Boolean.TRUE.equals(serverEnabled)) {
+            return;
+        }
+        String token = properties.getAuthToken();
+        if (token == null || token.isBlank() || token.length() < MIN_AUTH_TOKEN_LENGTH) {
+            throw new IllegalStateException(
+                    "ama.mcp.auth-token (AMA_MCP_AUTH_TOKEN) must be at least "
+                            + MIN_AUTH_TOKEN_LENGTH
+                            + " characters when the MCP endpoint is enabled.");
+        }
+        String path = properties.getPath();
+        if (path == null || !path.startsWith("/") || path.length() < 2) {
+            throw new IllegalStateException(
+                    "ama.mcp.path (AMA_MCP_PATH) must start with '/' when the MCP endpoint is enabled.");
+        }
+        log.info("MCP endpoint enabled on {} (loopback-only, token-protected).", path);
+    }
+}

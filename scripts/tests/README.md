@@ -21,6 +21,9 @@ All default scripts only hit the loopback fake or deterministic local business p
    export AMA_LLM_MODEL=synthetic-chat
    export AMA_LLM_DAILY_QUOTA=3
    export AMA_RATE_LIMIT_PER_IP_PER_HOUR=2
+   # Optional: enable the read-only MCP endpoint for test-mcp.sh (loopback + bearer token).
+   # export AMA_MCP_ENABLED=true
+   # export AMA_MCP_AUTH_TOKEN=replace-with-a-long-random-token
    ```
 
 5. Call `POST /api/admin/ingest` first and confirm the synthetic corpus reports success. On the fake, `GET /__calls` returns the safe call counter, `POST /__reset` resets it, and `POST /__mode` can set `ok`, `http400`, or `streamError`.
@@ -33,8 +36,16 @@ bash scripts/tests/integration/test-rate-limit.sh
 bash scripts/tests/integration/test-quota.sh
 bash scripts/tests/integration/test-graceful-degradation.sh
 bash scripts/tests/integration/test-internal-ip.sh
+MCP_TOKEN=replace-with-a-long-random-token bash scripts/tests/integration/test-mcp.sh
 bash scripts/tests/docker/test-docker-compose.sh
 ```
+
+The MCP script requires the backend started with `AMA_MCP_ENABLED=true` and the same token in
+`MCP_TOKEN`. It performs an MCP `initialize`/`tools/list`/`tools/call` handshake, asserts the
+answer cites the original manual excerpt text, and asserts the aircraft clarification
+shortcut never calls the model. Note that every MCP HTTP request counts toward the same
+per-IP rate-limit bucket as `/api/chat`, so run it on a backend with a capacity that fits a
+session's request count.
 
 The rate-limit script uses local 400 responses and consumes no model quota. The proxy script verifies that a forged `X-Forwarded-For` does not change loopback trust decisions; the real remote-Addr × trusted-proxy matrix is covered by backend unit tests. The compose script uses deterministic model-mismatch requests and never calls the model.
 

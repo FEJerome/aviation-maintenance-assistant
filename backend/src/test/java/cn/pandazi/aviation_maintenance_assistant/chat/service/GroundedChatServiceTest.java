@@ -65,6 +65,7 @@ class GroundedChatServiceTest {
 
         assertThat(result.outcome()).isEqualTo(ChatResponse.Outcome.ANSWERED);
         assertThat(result.citations()).containsExactly(excerpt.toCitation());
+        assertThat(result.excerpts()).containsExactly(excerpt);
         ArgumentCaptor<ChatRequest> chatRequest = ArgumentCaptor.forClass(ChatRequest.class);
         verify(executor).executeBlocking(chatRequest.capture(), eq("trace-grounded"));
         assertThat(chatRequest.getValue().messages()).hasSize(2);
@@ -112,6 +113,32 @@ class GroundedChatServiceTest {
         verify(observer).onToken("partial");
         verify(observer).onError(failure);
         verify(executor, never()).executeBlocking(any(), any());
+    }
+
+    @Test
+    void blockingResponseKeepsExcerptsAndCitationsSameSourceSameOrder() {
+        RetrievedExcerpt first = new RetrievedExcerpt(
+                "first text", "exr_1", "doc_test", "synthetic.md", 0, 0.9);
+        RetrievedExcerpt second = new RetrievedExcerpt(
+                "second text", "exr_2", "doc_test", "synthetic.md", 1, 0.7);
+        when(retrievalService.retrieve("question", "trace-grounded"))
+                .thenReturn(List.of(first, second));
+        when(executor.executeBlocking(any(ChatRequest.class), eq("trace-grounded")))
+                .thenReturn(response("Grounded answer"));
+
+        GroundedChatService.GroundedResult result = service.respond(request);
+
+        assertThat(result.excerpts()).containsExactly(first, second);
+        assertThat(result.citations()).containsExactly(first.toCitation(), second.toCitation());
+    }
+
+    @Test
+    void emptyRetrievalExposesNoExcerpts() {
+        when(retrievalService.retrieve("question", "trace-grounded")).thenReturn(List.of());
+
+        GroundedChatService.GroundedResult result = service.respond(request);
+
+        assertThat(result.excerpts()).isEmpty();
     }
 
     private RetrievedExcerpt excerpt() {

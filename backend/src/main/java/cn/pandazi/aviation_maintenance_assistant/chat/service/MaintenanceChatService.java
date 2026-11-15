@@ -6,6 +6,7 @@ import cn.pandazi.aviation_maintenance_assistant.chat.routing.AircraftInfoExtrac
 import cn.pandazi.aviation_maintenance_assistant.chat.routing.TopicClassifier;
 import cn.pandazi.aviation_maintenance_assistant.chat.session.ChatSessionStore;
 import cn.pandazi.aviation_maintenance_assistant.chat.session.SessionContext;
+import cn.pandazi.aviation_maintenance_assistant.rag.RetrievedExcerpt;
 import cn.pandazi.aviation_maintenance_assistant.rag.RetrievalService;
 import cn.pandazi.aviation_maintenance_assistant.service.LlmCallExecutor;
 import cn.pandazi.aviation_maintenance_assistant.validation.dto.ValidationResult;
@@ -40,13 +41,21 @@ public class MaintenanceChatService {
     }
 
     public ChatResponse process(String conversationId, String message) {
+        return processWithExcerpts(conversationId, message).response();
+    }
+
+    /**
+     * Blocking path that additionally exposes the original retrieved excerpts. The HTTP
+     * contract stays unchanged; the MCP tool consumes the excerpts as citation evidence.
+     */
+    public ProcessedAnswer processWithExcerpts(String conversationId, String message) {
         Prepared prepared = prepare(conversationId, message);
         if (prepared.shortcut() != null) {
-            return prepared.shortcut();
+            return new ProcessedAnswer(prepared.shortcut(), List.of());
         }
 
         GroundedChatService.GroundedResult result = groundedChatService.respond(prepared.groundedRequest());
-        return response(prepared, result);
+        return new ProcessedAnswer(response(prepared, result), result.excerpts());
     }
 
     public void processStream(String conversationId, String message, SseEmitter emitter) {
@@ -70,7 +79,8 @@ public class MaintenanceChatService {
                             shortcut.generationMode(),
                             shortcut.degraded(),
                             shortcut.degradationReason(),
-                            shortcut.citations()),
+                            shortcut.citations(),
+                            List.of()),
                     terminated,
                     emitter);
             return;
@@ -276,6 +286,12 @@ public class MaintenanceChatService {
 
     private String validatedEngine(SessionContext session) {
         return session != null && session.validated() ? session.confirmedEngine() : null;
+    }
+
+    public record ProcessedAnswer(ChatResponse response, List<RetrievedExcerpt> excerpts) {
+        public ProcessedAnswer {
+            excerpts = excerpts == null ? List.of() : List.copyOf(excerpts);
+        }
     }
 
     private record Prepared(

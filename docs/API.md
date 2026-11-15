@@ -4,6 +4,10 @@
 
 Base URL for local development: `http://127.0.0.1:8080`.
 
+> **MCP:** this HTTP reference covers the REST endpoints only. The optional read-only MCP
+> server (single `ask_maintenance_question` tool, streamable HTTP, loopback-and-token
+> guarded, disabled by default) has its own contract: [MCP.md](MCP.md).
+
 ## POST /api/chat
 
 Runs one blocking grounded chat request.

@@ -8,6 +8,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
@@ -23,16 +24,25 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Rate limiting for the chat and MCP endpoints. The MCP endpoint joins the same per-IP
+ * bucket, so both interfaces share one quota window.
+ */
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private final RateLimitProperties properties;
+    private final String mcpPath;
     private final ObjectMapper objectMapper;
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
-    public RateLimitFilter(RateLimitProperties properties, ObjectMapper objectMapper) {
+    public RateLimitFilter(
+            RateLimitProperties properties,
+            @Value("${ama.mcp.path:/mcp}") String mcpPath,
+            ObjectMapper objectMapper) {
         this.properties = properties;
+        this.mcpPath = mcpPath;
         this.objectMapper = objectMapper;
     }
 
@@ -50,7 +60,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (properties.isEnabled() && path.startsWith("/api/chat")) {
+        if (properties.isEnabled() && isRateLimitedPath(path)) {
             Bucket bucket = buckets.computeIfAbsent(clientIp, key -> Bucket.builder()
                     .addLimit(Bandwidth.classic(
                             properties.getCapacity(),
@@ -64,6 +74,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isRateLimitedPath(String path) {
+        if (path.startsWith("/api/chat")) {
+            return true;
+        }
+        String mcpPath = this.mcpPath;
+        return mcpPath != null && !mcpPath.isBlank() && path.equals(mcpPath);
     }
 
     private Duration parsePeriod() {

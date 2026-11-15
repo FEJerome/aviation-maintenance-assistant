@@ -26,9 +26,11 @@ public class GroundedChatService {
             ChatResponse.GenerationMode generationMode,
             boolean degraded,
             String degradationReason,
-            List<Citation> citations) {
+            List<Citation> citations,
+            List<RetrievedExcerpt> excerpts) {
         public GroundedResult {
             citations = citations == null ? List.of() : List.copyOf(citations);
+            excerpts = excerpts == null ? List.of() : List.copyOf(excerpts);
         }
     }
 
@@ -95,7 +97,8 @@ public class GroundedChatService {
                         ChatResponse.GenerationMode.STREAMING,
                         false,
                         null,
-                        citations));
+                        citations,
+                        excerpts));
             }
 
             @Override
@@ -116,7 +119,8 @@ public class GroundedChatService {
                 ChatResponse.GenerationMode.NON_STREAMING,
                 streamingFallback,
                 streamingFallback ? "STREAMING_DISABLED" : null,
-                citations(excerpts));
+                citations(excerpts),
+                excerpts);
     }
 
     private ChatRequest chatRequest(GroundedRequest request, List<RetrievedExcerpt> excerpts) {
@@ -149,6 +153,7 @@ public class GroundedChatService {
                 ChatResponse.GenerationMode.NONE,
                 false,
                 null,
+                List.of(),
                 List.of());
     }
 }

@@ -84,7 +84,62 @@ class RateLimitFilterTest {
         properties.setRefillPeriod("1h");
         properties.setEnabled(enabled);
         properties.setTrustProxyHeaders(trustProxy);
-        return new RateLimitFilter(properties, new ObjectMapper());
+        return new RateLimitFilter(properties, "/mcp", new ObjectMapper());
+    }
+
+    @Test
+    void mcpEndpointJoinsTheSamePerIpBucket() throws Exception {
+        RateLimitFilter filter = filter(1, true, false);
+        filter.doFilter(request("/mcp", "127.0.0.1", null),
+                new MockHttpServletResponse(), new MockFilterChain());
+        MockHttpServletResponse second = new MockHttpServletResponse();
+
+        filter.doFilter(request("/mcp", "127.0.0.1", null), second, new MockFilterChain());
+
+        assertThat(second.getStatus()).isEqualTo(429);
+        assertThat(second.getContentAsString()).contains("RATE_LIMITED");
+    }
+
+    @Test
+    void chatAndMcpShareOneBucketPerIp() throws Exception {
+        RateLimitFilter filter = filter(1, true, false);
+        filter.doFilter(request("/api/chat", "127.0.0.1", null),
+                new MockHttpServletResponse(), new MockFilterChain());
+        MockHttpServletResponse second = new MockHttpServletResponse();
+
+        filter.doFilter(request("/mcp", "127.0.0.1", null), second, new MockFilterChain());
+
+        assertThat(second.getStatus()).isEqualTo(429);
+    }
+
+    @Test
+    void similarButDistinctPathDoesNotJoinTheBucket() throws Exception {
+        RateLimitFilter filter = filter(1, true, false);
+        filter.doFilter(request("/mcp", "127.0.0.1", null),
+                new MockHttpServletResponse(), new MockFilterChain());
+        MockHttpServletResponse similar = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request("/mcp2", "127.0.0.1", null), similar, chain);
+
+        assertThat(similar.getStatus()).isEqualTo(200);
+        assertThat(chain.getRequest()).isNotNull();
+    }
+
+    @Test
+    void customMcpPathIsRateLimited() throws Exception {
+        RateLimitProperties properties = new RateLimitProperties();
+        properties.setCapacity(1);
+        properties.setRefillPeriod("1h");
+        properties.setEnabled(true);
+        RateLimitFilter filter = new RateLimitFilter(properties, "/custom-mcp", new ObjectMapper());
+        filter.doFilter(request("/custom-mcp", "127.0.0.1", null),
+                new MockHttpServletResponse(), new MockFilterChain());
+        MockHttpServletResponse second = new MockHttpServletResponse();
+
+        filter.doFilter(request("/custom-mcp", "127.0.0.1", null), second, new MockFilterChain());
+
+        assertThat(second.getStatus()).isEqualTo(429);
     }
 
     private MockHttpServletRequest request(String path, String remoteAddress, String forwardedFor) {

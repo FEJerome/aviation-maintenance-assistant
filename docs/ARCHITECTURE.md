@@ -53,4 +53,26 @@ Normal business responses return 200 with an additive ChatResponse; infrastructu
 
 Rate limiting and quota enforcement can be explicitly disabled. Forwarded headers are distrusted by default; enable them only behind a controlled proxy with no direct backend access. Sessions are a single-instance in-memory LRU, and quota state is a single-instance UTC file — neither supports multi-replica deployment.
 
-The MCP server, the golden-set executor, and full persistent tracing remain future capabilities.
+## Read-Only MCP
+
+The MCP layer is a thin adapter, not a second pipeline. `McpMaintenanceTool` (Spring AI 1.1.x
+annotation-scanned `@McpTool`, streamable HTTP transport on `AMA_MCP_PATH`) delegates to
+`MaintenanceChatService.processWithExcerpts`, which runs the same `prepare` control flow as
+the HTTP path and calls the same blocking grounding path (`GroundedChatService.respond`).
+`GroundedResult` already carries the retrieved `RetrievedExcerpt` list, so MCP citations —
+same fields as HTTP citations plus the original `text` — are built from the same source in
+the same order; nothing is re-retrieved. The tool maps the five business outcomes into a
+`ChatResponse`-isomorphic result, short-circuits without any model call exactly like HTTP,
+and converts model/retrieval failures into safe `isError` tool results carrying only a
+semantic code and traceId. Quota accounting, session reuse, and degradation semantics are
+inherited unchanged from the shared executor and services.
+
+Endpoint security is a small filter chain in front of the transport: `McpAuthFilter`
+(loopback-only by remote address, forwarded headers permanently ignored, constant-time
+bearer check against `AMA_MCP_AUTH_TOKEN`) runs before `RateLimitFilter`, which includes the
+MCP path in the same per-IP bucket as `/api/chat`. `McpStartupValidator` fails startup when
+the endpoint is enabled without a sufficiently long token. The endpoint is disabled by
+default; when disabled the transport autoconfiguration backs off entirely and the path
+returns the standard 404. Contract: [MCP.md](MCP.md).
+
+The golden-set executor and full persistent tracing remain future capabilities.
