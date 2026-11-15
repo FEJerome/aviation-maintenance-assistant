@@ -226,11 +226,12 @@ curl -X POST http://localhost:8080/api/admin/ingest
 │   ├── quickstart/          # 合成示例文档 + 快速开始指南
 │   └── aviation/            # 航空参考实现说明
 ├── evals/                   # 评测资产
-│   └── aviation/            # Golden-set schema 与评测指南（planned）
+│   └── aviation/            # Golden-set schema、20 条评测集与评测指南
 ├── docker-compose.yml       # Docker Compose 编排
 ├── DEPLOY.md                # 部署指南
 ├── LICENSE                  # MIT 许可证
 ├── scripts/                 # 测试与工具脚本
+│   ├── eval/                # Golden-set 评测执行器
 │   └── tests/               # 手动/半自动验收脚本
 └── README.md                # 英文主入口
 ```
@@ -255,6 +256,17 @@ curl -X POST http://localhost:8080/api/admin/ingest
 
 ---
 
+## 📊 评测
+
+确定性的 golden-set 执行器在全 loopback 环境（fake LLM＋隔离 Chroma collection＋本地 embedding，不接触真实模型）上对参考实现做回归检查：
+
+- **评测集**：20 条，基于三篇合成 quickstart 手册，覆盖全部六种控制流路由（`rag`／`validation_block`／`validation_unknown`／`clarify_model`／`no_answer`／`out_of_scope`），中英文问题兼有——见 [evals/aviation/](evals/aviation/)。
+- **检查层**：L1 控制流路由＋零模型调用断言，L2 doc 级检索 hit@5／MRR／citations 完整性，L3 回答结构（引用标记、固定拒答文案）。
+- **门槛**：路由正确率 100%、零调用违规 0、no_answer 误答率 0、rag hit@5 100%、citations 完整性 100%（MRR 只报告不设门槛）。语义／LLM 评审评分留待发布验收。
+- **执行器**：[scripts/eval/run-golden-set.mjs](scripts/eval/run-golden-set.mjs)——零依赖，可选第二遍走只读 MCP 端点；报告写入 `docs/test-reports/`。
+
+---
+
 ## 🗺️ Roadmap
 
 | 事项 | 状态 | 备注 |
@@ -263,7 +275,7 @@ curl -X POST http://localhost:8080/api/admin/ingest
 | BYOK：任意 OpenAI 兼容端点（base_url / api_key / model） | ✅ 已实现 | 配置：[docs/CONFIGURATION.zh-CN.md](docs/CONFIGURATION.zh-CN.md) |
 | PDF/Markdown 摄入与稳定 ID | ✅ 已实现 | 同版本幂等重写 |
 | 只读 MCP 端点（streamable HTTP 上的 `ask_maintenance_question`） | ✅ 已实现（可选） | 默认关闭；契约：[docs/MCP.md](docs/MCP.md) |
-| Golden-set 评测工具（约 20 条航空条目） | 📋 Planned | Schema 已就绪：[evals/aviation/](evals/aviation/)；条目本体尚未撰写 |
+| Golden-set 评测工具（20 条航空条目、六路由、中英双语） | ✅ 已实现 | 评测集：[evals/aviation/](evals/aviation/)；执行器：[scripts/eval/](scripts/eval/)；仅 loopback 本地运行，不进 required CI |
 | 英文演示界面 | 📋 Planned | 当前界面为中文 |
 
 ---

@@ -28,6 +28,8 @@ All default scripts only hit the loopback fake or deterministic local business p
 
 5. Call `POST /api/admin/ingest` first and confirm the synthetic corpus reports success. On the fake, `GET /__calls` returns the safe call counter, `POST /__reset` resets it, and `POST /__mode` can set `ok`, `http400`, or `streamError`.
 
+The fake also recognizes the backend's fixed query-translation prompt and replies with a deterministic translation loaded from `FAKE_TRANSLATION_MAP` (a JSON file mapping exact question strings to fixed English translations). Unmapped questions are echoed back unchanged, and regular chat completions are unaffected. The golden-set evaluation (`scripts/eval/`) relies on this for its cross-language items.
+
 ## Scripts
 
 ```bash
