@@ -3,7 +3,7 @@
 > This document defines the collaboration workflow and quality standards for this project.
 >
 > **Scope**:
-> - Current: PR-based contributions with CI checks (backend tests, frontend tests/build, npm audit) are enforced on `main`.
+> - Current: PR-based contributions with CI checks are enforced on `main`: backend tests and frontend tests/build are blocking; `npm audit` is informational on push/PR (only the weekly scheduled run may fail for real).
 > - Historical note: the project started as a single-maintainer effort; the early trunk-based workflow is kept below for reference only and no longer describes current practice.
 
 ---
@@ -36,24 +36,24 @@ Why not "code as documentation"?
 ## Development Workflow
 
 ```
-+--------------+     +--------------+     +--------------+     +--------------+
-| 1. Need/Issue| --> | 2. Write     | --> | 3. Implement | --> | 4. Update    |
-|   (Issue/    |     |   design doc |     |   the code   |     |   documents  |
-|   brainstorm)|     |   (ADR/PRD)  |     |  (Feature/   |     |  (API/diagram)|
-+--------------+     +--------------+     |    Dev)      |     +--------------+
-                                          +--------------+           |
-                                                                       v
-                                                            +--------------+
-                                                            | 5. Commit    |
-                                                            |  (structured)|
-                                                            +--------------+
-                                                                       |
-                                                                       v
-                                                            +--------------+
-                                                            | 6. PR + CI   |
-                                                            |  (review +   |
-                                                            |   checks)    |
-                                                            +--------------+
++---------------+     +---------------+     +---------------+     +---------------+
+| 1. Need/Issue | --> | 2. Write      | --> | 3. Implement  | --> | 4. Update     |
+| (Issue/idea)  |     | design doc    |     | the code      |     | documents     |
+| (brainstorm)  |     | (ADR/PRD)     |     | (Feature/Dev) |     | (API/diagram) |
++---------------+     +---------------+     +---------------+     +---------------+
+                                                                          |
+                                                                          v
+                                                               +---------------+
+                                                               | 5. Commit     |
+                                                               | (structured)  |
+                                                               +---------------+
+                                                                          |
+                                                                          v
+                                                               +---------------+
+                                                               | 6. PR + CI    |
+                                                               | (review +     |
+                                                               |   checks)     |
+                                                               +---------------+
 ```
 
 ### Requirements per stage
@@ -274,19 +274,19 @@ Self-check every item before submitting a pull request:
 ### Current: GitHub Flow (PR-based, enforced by CI)
 
 ```
-main  ─────────/\──────────/\──────────
-      \        /          /
-       feature/voice-input
-       fix/session-timeout
-       docs/update-deploy-guide
+main  ──────────/\──────────────────────/\──────────
+               /  \                    /  \
+              /    \                  /    \
+             /      \                /      \
+       feature/voice-input    fix/session-timeout
 ```
 
 Enabled by the contribution-workflow setup (`.github/workflows/`):
 
 - Every change lands on `main` through a **pull request**; direct pushes to `main` should be reserved for trivial cases and still pass CI.
-- CI checks on every push and pull request to `main`:
-  - **ci-backend**: `./mvnw -B test` on Eclipse Temurin 21 (JDK 21).
-  - **ci-frontend**: `npm ci`, `npm test`, `npm run build`, and `npm audit`.
+- CI runs on every push and pull request to `main`:
+  - **ci-backend**: `./mvnw -B test` on Eclipse Temurin 21 (JDK 21) — blocking.
+  - **ci-frontend**: `npm ci`, `npm test`, `npm run build` — blocking; plus `npm audit`, informational on push/PR (`continue-on-error`) and allowed to fail for real only on the weekly scheduled run (Monday 00:00 UTC).
 - Branch naming: `feature/…`, `fix/…`, `docs/…`.
 - Before merging, the code review checklist above must be walked through.
 
