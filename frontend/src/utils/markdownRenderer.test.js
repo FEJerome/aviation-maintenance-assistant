@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { renderMarkdown } from './markdownRenderer.js'
 
 /**
- * 验证 Markdown 渲染器的关键行为：
- * 1. 标准 Markdown 正确渲染
- * 2. LLM 偶发的格式错误被前端兜底修正
- * 3. XSS 内容被过滤
+ * Verify the key behaviors of the Markdown renderer:
+ * 1. Standard Markdown renders correctly
+ * 2. Occasional LLM formatting errors are repaired by the frontend fallback
+ * 3. XSS content is filtered out
  */
 describe('renderMarkdown', () => {
   it('renders a proper heading', () => {
@@ -79,5 +79,31 @@ describe('renderMarkdown', () => {
     expect(renderMarkdown('')).toBe('')
     expect(renderMarkdown(null)).toBe('')
     expect(renderMarkdown(undefined)).toBe('')
+  })
+})
+
+describe('link URI allowlist', () => {
+  it('preserves http and https link hrefs', () => {
+    const html = renderMarkdown('[manual](https://example.com/amm) [site](http://example.com)')
+    expect(html).toContain('href="https://example.com/amm"')
+    expect(html).toContain('href="http://example.com"')
+  })
+
+  it('strips javascript: link hrefs', () => {
+    const html = renderMarkdown('[xss](javascript:alert(1))')
+    expect(html).not.toContain('href')
+    expect(html).not.toContain('javascript:')
+  })
+
+  it('strips on* event handler attributes from links', () => {
+    const html = renderMarkdown('<a href="https://example.com" onclick="alert(1)">x</a>')
+    expect(html).not.toContain('onclick')
+  })
+
+  it('preserves ftp, mailto and relative link hrefs', () => {
+    const html = renderMarkdown('[f](ftp://example.com/file) [m](mailto:a@b.c) [r](/docs/guide)')
+    expect(html).toContain('href="ftp://example.com/file"')
+    expect(html).toContain('href="mailto:a@b.c"')
+    expect(html).toContain('href="/docs/guide"')
   })
 })
