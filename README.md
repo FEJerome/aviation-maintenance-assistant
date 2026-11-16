@@ -36,7 +36,6 @@
 
 **Planned (target contracts, not yet available):**
 
-- **Golden-set evaluation harness** — reproducible regression evaluation for retrieval and answer quality. Schema: [evals/aviation/golden-set.schema.json](evals/aviation/golden-set.schema.json). Status: **planned**; the item body is not yet authored.
 - **Complete persistent traces** — only request-scoped trace IDs and safe logs are currently provided.
 
 ---
