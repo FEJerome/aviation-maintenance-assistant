@@ -16,7 +16,7 @@
 
 云模式下三个连接变量必须完整配置。任一存在即选择通用模式，缺项会失败，绝不用 DeepSeek 值补齐，因此 YAML/Compose 不得放空占位。`LANGCHAIN4J_OPEN_AI_CHAT_MODEL_API_KEY` 不作为 key 来源。
 
-迁移期仅配置 `DEEPSEEK_API_KEY` 时，在云模式使用 `https://api.deepseek.com/v1`、`deepseek-chat`、`0.2`；local-only 下拒绝该云回落。
+迁移期仅配置 `DEEPSEEK_API_KEY` 时，在云模式使用 `https://api.deepseek.com/v1`、`deepseek-flash`、`0.2`；local-only 下拒绝该云回落。
 
 ## local-only 防护
 
@@ -67,4 +67,4 @@ MCP 服务通过 streamable HTTP 暴露单一只读工具 `ask_maintenance_quest
 
 MCP 鉴权过滤器只认 loopback 远端地址，并永久忽略转发头，与 `AMA_TRUST_PROXY_HEADERS` 无关。部署在代理或容器网络后远端地址将不再是 loopback；请改用本地端口转发。
 
-golden-set 执行器和可下载的完整持久化 trace 仍为规划能力。
+可下载的完整持久化 trace 仍为规划能力。

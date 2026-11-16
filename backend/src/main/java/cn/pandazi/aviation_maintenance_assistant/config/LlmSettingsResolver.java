@@ -25,7 +25,7 @@ public class LlmSettingsResolver {
     private static final String MODEL_PROPERTY = "ama.llm.model";
     private static final String LEGACY_API_KEY_PROPERTY = "DEEPSEEK_API_KEY";
     private static final String LEGACY_BASE_URL = "https://api.deepseek.com/v1";
-    private static final String LEGACY_MODEL = "deepseek-chat";
+    private static final String LEGACY_MODEL = "deepseek-flash";
     private static final double LEGACY_TEMPERATURE = 0.2;
 
     private final AmaProperties properties;

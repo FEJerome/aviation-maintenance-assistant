@@ -50,7 +50,7 @@
 
 **劣势**：
 - 暂无官方 Embedding API（但本项目通过本地 ONNX 模型解决，不受影响）
-- 模型版本迭代快，需关注 API 稳定性（目前 deepseek-chat 已非常稳定）
+- 模型版本迭代快，需关注 API 稳定性（目前 deepseek-flash 已非常稳定）
 
 ### 选项 C：OpenAI GPT-4 / GPT-3.5
 
@@ -79,7 +79,9 @@
 
 ## 决策
 
-**选用 DeepSeek（deepseek-chat）作为项目 LLM。**
+**选用 DeepSeek（deepseek-flash）作为项目 LLM。**
+
+> **更新（2026-11-16）**：模型别名由 `deepseek-chat` 调整为 `deepseek-flash`（DeepSeek-V4.1-Flash-1017）；原 `deepseek-chat` 别名已于 2026-07-24 退役。供应商与接入方式决策不变。
 
 接入方式：`langchain4j-open-ai` 模块，OpenAI 兼容模式。
 
@@ -91,7 +93,7 @@ langchain4j:
     chat-model:
       base-url: https://api.deepseek.com/v1
       api-key: ${DEEPSEEK_API_KEY}
-      model-name: deepseek-chat
+      model-name: deepseek-flash
       temperature: 0.7
       timeout: PT60S
 ```

@@ -83,7 +83,7 @@ class LlmSettingsResolverTest {
 
         assertEquals("https://api.deepseek.com/v1", settings.baseUrl());
         assertEquals(LEGACY_KEY, settings.apiKey());
-        assertEquals("deepseek-chat", settings.model());
+        assertEquals("deepseek-flash", settings.model());
         assertEquals(0.2, settings.temperature());
         assertEquals(LlmSettingsResolver.SettingsSource.DEEPSEEK_LEGACY, settings.source());
     }
