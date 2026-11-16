@@ -1,0 +1,1181 @@
+{
+  "generatedAt": "2026-11-16T06:40:58.998Z",
+  "backendUrl": "http://127.0.0.1:18091",
+  "label": "Release acceptance: provider deepseek (api.deepseek.com), model deepseek-flash, synthetic quickstart corpus, single run",
+  "judge": {
+    "model": "deepseek-flash",
+    "calls": 16
+  },
+  "modelCallsConsumed": 48,
+  "maxModelCalls": 80,
+  "set": "evals/aviation/golden-set.json",
+  "note": "Real-model smoke on the synthetic corpus; covers exactly one provider/model at one point in time. out_of_scope is mapped to NO_ANSWER (not a native route).",
+  "channels": [
+    {
+      "channel": "http",
+      "metrics": {
+        "routeAccuracy": 0.95,
+        "zeroCallViolations": 1,
+        "noAnswerFalseAnswerRate": 0.14285714285714285,
+        "ragDocHitAt5": 1,
+        "citationIntegrity": 1,
+        "mrr": 1,
+        "judgeKeypointCoverage": 0.375,
+        "judgeFaithfulness": {
+          "evaluable": 0,
+          "faithful": 0,
+          "unfaithful": 0
+        }
+      },
+      "gates": [
+        {
+          "gate": "route accuracy = 100%",
+          "value": 0.95,
+          "pass": false
+        },
+        {
+          "gate": "zero-call violations = 0",
+          "value": 1,
+          "pass": false
+        },
+        {
+          "gate": "no_answer false-answer rate = 0",
+          "value": 0.14285714285714285,
+          "pass": false
+        },
+        {
+          "gate": "rag doc-level hit@5 = 100%",
+          "value": 1,
+          "pass": true
+        },
+        {
+          "gate": "citations integrity = 100%",
+          "value": 1,
+          "pass": true
+        },
+        {
+          "gate": "judge keypoint coverage = 100%",
+          "value": 0.375,
+          "pass": false
+        }
+      ],
+      "allGatesPass": false,
+      "results": [
+        {
+          "id": "AVI-001",
+          "route": "rag",
+          "language": "en",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 1,
+          "callExpectation": "1..1",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "States the total oil capacity including the filter (six quarts on the synthetic scale).",
+                "covered": true
+              },
+              {
+                "keypoint": "Makes clear the figure is the with-filter capacity, not the partial fill.",
+                "covered": true
+              }
+            ],
+            "faithfulness": {
+              "supported": null,
+              "notes": "No source excerpt text is available, so support cannot be evaluated."
+            },
+            "faithfulnessEvaluable": false,
+            "allKeypointsCovered": true
+          },
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-002",
+          "route": "rag",
+          "language": "en",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 1,
+          "callExpectation": "1..1",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "Adds oil gradually in half-quart steps, pausing between additions so the oil can settle.",
+                "covered": true
+              },
+              {
+                "keypoint": "Warns against filling past the upper dipstick mark.",
+                "covered": true
+              },
+              {
+                "keypoint": "Finishes by securing the filler cap and checking its latch indicator.",
+                "covered": true
+              }
+            ],
+            "faithfulness": {
+              "supported": null,
+              "notes": "No source excerpt text is available, so faithfulness cannot be evaluated."
+            },
+            "faithfulnessEvaluable": false,
+            "allKeypointsCovered": true
+          },
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-003",
+          "route": "rag",
+          "language": "en",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 1,
+          "callExpectation": "1..1",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "Gives the nose tire cold pressure target (45 psi with a small tolerance).",
+                "covered": false
+              },
+              {
+                "keypoint": "Gives the main tire cold pressure target (50 psi with a small tolerance).",
+                "covered": false
+              }
+            ],
+            "faithfulness": {
+              "supported": null,
+              "notes": "No source excerpt text is available, so faithfulness cannot be evaluated."
+            },
+            "faithfulnessEvaluable": false,
+            "allKeypointsCovered": false
+          },
+          "pass": false,
+          "failures": [
+            "judge: key points not covered: Gives the nose tire cold pressure target (45 psi with a small tolerance). | Gives the main tire cold pressure target (50 psi with a small tolerance)."
+          ]
+        },
+        {
+          "id": "AVI-004",
+          "route": "rag",
+          "language": "en",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 1,
+          "callExpectation": "1..1",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "Covers propeller and spinner condition.",
+                "covered": false
+              },
+              {
+                "keypoint": "Covers windshield cleanliness and crack limits.",
+                "covered": false
+              },
+              {
+                "keypoint": "Covers wing leading edges, control surface movement, antennas and static ports.",
+                "covered": false
+              }
+            ],
+            "faithfulness": {
+              "supported": null,
+              "notes": "Faithfulness cannot be evaluated because no source excerpt text is available."
+            },
+            "faithfulnessEvaluable": false,
+            "allKeypointsCovered": false
+          },
+          "pass": false,
+          "failures": [
+            "judge: key points not covered: Covers propeller and spinner condition. | Covers windshield cleanliness and crack limits. | Covers wing leading edges, control surface movement, antennas and static ports."
+          ]
+        },
+        {
+          "id": "AVI-005",
+          "route": "rag",
+          "language": "zh",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 2,
+          "callExpectation": "2..2",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "Adds oil gradually in half-quart steps, pausing between additions so the oil can settle.",
+                "covered": true
+              },
+              {
+                "keypoint": "Warns against filling past the upper dipstick mark.",
+                "covered": false
+              },
+              {
+                "keypoint": "Finishes by securing the filler cap and checking its latch indicator.",
+                "covered": true
+              }
+            ],
+            "faithfulness": {
+              "supported": null,
+              "notes": "No source excerpt text is available, so faithfulness cannot be evaluated."
+            },
+            "faithfulnessEvaluable": false,
+            "allKeypointsCovered": false
+          },
+          "pass": false,
+          "failures": [
+            "judge: key points not covered: Warns against filling past the upper dipstick mark."
+          ]
+        },
+        {
+          "id": "AVI-006",
+          "route": "rag",
+          "language": "zh",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 2,
+          "callExpectation": "2..2",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "Covers propeller and spinner condition.",
+                "covered": false
+              },
+              {
+                "keypoint": "Covers windshield cleanliness and crack limits.",
+                "covered": false
+              },
+              {
+                "keypoint": "Covers wing leading edges, control surface movement, antennas and static ports.",
+                "covered": false
+              }
+            ],
+            "faithfulness": {
+              "supported": null,
+              "notes": "No source excerpt text is available, so faithfulness cannot be evaluated."
+            },
+            "faithfulnessEvaluable": false,
+            "allKeypointsCovered": false
+          },
+          "pass": false,
+          "failures": [
+            "judge: key points not covered: Covers propeller and spinner condition. | Covers windshield cleanliness and crack limits. | Covers wing leading edges, control surface movement, antennas and static ports."
+          ]
+        },
+        {
+          "id": "AVI-007",
+          "route": "rag",
+          "language": "zh",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 2,
+          "callExpectation": "2..2",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "States the minimum tread depth and that visible fabric requires replacement.",
+                "covered": true
+              },
+              {
+                "keypoint": "States the cut length and depth limits beyond which the tire is replaced.",
+                "covered": true
+              },
+              {
+                "keypoint": "Notes that sidewall cracks in the bead-to-shoulder zone and any flat spot are not permitted.",
+                "covered": false
+              }
+            ],
+            "faithfulness": {
+              "supported": null,
+              "notes": "No source excerpt text is available, so faithfulness cannot be evaluated."
+            },
+            "faithfulnessEvaluable": false,
+            "allKeypointsCovered": false
+          },
+          "pass": false,
+          "failures": [
+            "judge: key points not covered: Notes that sidewall cracks in the bead-to-shoulder zone and any flat spot are not permitted."
+          ]
+        },
+        {
+          "id": "AVI-008",
+          "route": "rag",
+          "language": "zh",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 2,
+          "callExpectation": "2..2",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "Records the date and the inspector identifier in the logbook.",
+                "covered": true
+              },
+              {
+                "keypoint": "Records any discrepancies found, using the invented discrepancy codes in the D-100 range.",
+                "covered": true
+              }
+            ],
+            "faithfulness": {
+              "supported": null,
+              "notes": "No source excerpt text is available, so faithfulness cannot be evaluated."
+            },
+            "faithfulnessEvaluable": false,
+            "allKeypointsCovered": true
+          },
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-009",
+          "route": "validation_block",
+          "language": "en",
+          "expectedOutcome": "VALIDATION_BLOCKED",
+          "actualOutcome": "VALIDATION_BLOCKED",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-010",
+          "route": "validation_block",
+          "language": "zh",
+          "expectedOutcome": "VALIDATION_BLOCKED",
+          "actualOutcome": "VALIDATION_BLOCKED",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-011",
+          "route": "validation_unknown",
+          "language": "en",
+          "expectedOutcome": "VALIDATION_UNKNOWN",
+          "actualOutcome": "VALIDATION_UNKNOWN",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-012",
+          "route": "clarify_model",
+          "language": "en",
+          "expectedOutcome": "CLARIFICATION_REQUIRED",
+          "actualOutcome": "CLARIFICATION_REQUIRED",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-013",
+          "route": "clarify_model",
+          "language": "zh",
+          "expectedOutcome": "CLARIFICATION_REQUIRED",
+          "actualOutcome": "CLARIFICATION_REQUIRED",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-014",
+          "route": "no_answer",
+          "language": "en",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "NO_ANSWER",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": false,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-015",
+          "route": "no_answer",
+          "language": "en",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "NO_ANSWER",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": false,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-016",
+          "route": "no_answer",
+          "language": "zh",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "ANSWERED",
+          "calls": 2,
+          "callExpectation": "0..1",
+          "routeOk": false,
+          "zeroCallViolation": true,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": true,
+          "judge": null,
+          "pass": false,
+          "failures": [
+            "route: expected NO_ANSWER, got ANSWERED",
+            "calls: expected 0..1, got 2",
+            "citations: must be empty on this route",
+            "reply: expected fixed notice \"未在手册中找到相关内容。\""
+          ]
+        },
+        {
+          "id": "AVI-017",
+          "route": "no_answer",
+          "language": "zh",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "NO_ANSWER",
+          "calls": 1,
+          "callExpectation": "0..1",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": false,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-018",
+          "route": "out_of_scope",
+          "language": "en",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "NO_ANSWER",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": false,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-019",
+          "route": "out_of_scope",
+          "language": "en",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "NO_ANSWER",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": false,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-020",
+          "route": "out_of_scope",
+          "language": "zh",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "NO_ANSWER",
+          "calls": 1,
+          "callExpectation": "0..1",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": false,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        }
+      ]
+    },
+    {
+      "channel": "mcp",
+      "metrics": {
+        "routeAccuracy": 0.95,
+        "zeroCallViolations": 1,
+        "noAnswerFalseAnswerRate": 0.14285714285714285,
+        "ragDocHitAt5": 1,
+        "citationIntegrity": 1,
+        "mrr": 1,
+        "judgeKeypointCoverage": 0.5,
+        "judgeFaithfulness": {
+          "evaluable": 8,
+          "faithful": 8,
+          "unfaithful": 0
+        }
+      },
+      "gates": [
+        {
+          "gate": "route accuracy = 100%",
+          "value": 0.95,
+          "pass": false
+        },
+        {
+          "gate": "zero-call violations = 0",
+          "value": 1,
+          "pass": false
+        },
+        {
+          "gate": "no_answer false-answer rate = 0",
+          "value": 0.14285714285714285,
+          "pass": false
+        },
+        {
+          "gate": "rag doc-level hit@5 = 100%",
+          "value": 1,
+          "pass": true
+        },
+        {
+          "gate": "citations integrity = 100%",
+          "value": 1,
+          "pass": true
+        },
+        {
+          "gate": "judge keypoint coverage = 100%",
+          "value": 0.5,
+          "pass": false
+        }
+      ],
+      "allGatesPass": false,
+      "results": [
+        {
+          "id": "AVI-001",
+          "route": "rag",
+          "language": "en",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 1,
+          "callExpectation": "1..1",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "States the total oil capacity including the filter (six quarts on the synthetic scale).",
+                "covered": true
+              },
+              {
+                "keypoint": "Makes clear the figure is the with-filter capacity, not the partial fill.",
+                "covered": true
+              }
+            ],
+            "faithfulness": {
+              "supported": true,
+              "notes": "All factual claims are supported: the 6.0 US quart with-filter value comes from S1 and is identified as fictional/synthetic sample data in the excerpts."
+            },
+            "faithfulnessEvaluable": true,
+            "allKeypointsCovered": true
+          },
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-002",
+          "route": "rag",
+          "language": "en",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 1,
+          "callExpectation": "1..1",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "Adds oil gradually in half-quart steps, pausing between additions so the oil can settle.",
+                "covered": true
+              },
+              {
+                "keypoint": "Warns against filling past the upper dipstick mark.",
+                "covered": true
+              },
+              {
+                "keypoint": "Finishes by securing the filler cap and checking its latch indicator.",
+                "covered": true
+              }
+            ],
+            "faithfulness": {
+              "supported": true,
+              "notes": "Every factual/procedural claim is supported by the cited synthetic excerpts, which explicitly state the PWR-40S material is fictional and not applicable to a real CTLS/Rotax 912."
+            },
+            "faithfulnessEvaluable": true,
+            "allKeypointsCovered": true
+          },
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-003",
+          "route": "rag",
+          "language": "en",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 1,
+          "callExpectation": "1..1",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "Gives the nose tire cold pressure target (45 psi with a small tolerance).",
+                "covered": false
+              },
+              {
+                "keypoint": "Gives the main tire cold pressure target (50 psi with a small tolerance).",
+                "covered": false
+              }
+            ],
+            "faithfulness": {
+              "supported": true,
+              "notes": "Every factual claim is supported by the cited excerpts, which show the only listed tire pressures are explicitly synthetic and not applicable to the CTLS."
+            },
+            "faithfulnessEvaluable": true,
+            "allKeypointsCovered": false
+          },
+          "pass": false,
+          "failures": [
+            "judge: key points not covered: Gives the nose tire cold pressure target (45 psi with a small tolerance). | Gives the main tire cold pressure target (50 psi with a small tolerance)."
+          ]
+        },
+        {
+          "id": "AVI-004",
+          "route": "rag",
+          "language": "en",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 1,
+          "callExpectation": "1..1",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "Covers propeller and spinner condition.",
+                "covered": false
+              },
+              {
+                "keypoint": "Covers windshield cleanliness and crack limits.",
+                "covered": false
+              },
+              {
+                "keypoint": "Covers wing leading edges, control surface movement, antennas and static ports.",
+                "covered": false
+              }
+            ],
+            "faithfulness": {
+              "supported": true,
+              "notes": "The answer accurately states that the cited excerpts do not provide the itemized walk-around inspection content and limits its claims to scope and recording details supported by the sources."
+            },
+            "faithfulnessEvaluable": true,
+            "allKeypointsCovered": false
+          },
+          "pass": false,
+          "failures": [
+            "judge: key points not covered: Covers propeller and spinner condition. | Covers windshield cleanliness and crack limits. | Covers wing leading edges, control surface movement, antennas and static ports."
+          ]
+        },
+        {
+          "id": "AVI-005",
+          "route": "rag",
+          "language": "zh",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 2,
+          "callExpectation": "2..2",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "Adds oil gradually in half-quart steps, pausing between additions so the oil can settle.",
+                "covered": true
+              },
+              {
+                "keypoint": "Warns against filling past the upper dipstick mark.",
+                "covered": true
+              },
+              {
+                "keypoint": "Finishes by securing the filler cap and checking its latch indicator.",
+                "covered": true
+              }
+            ],
+            "faithfulness": {
+              "supported": true,
+              "notes": "The answer's claims are supported by the cited excerpts and it explicitly treats the PWR-40S material as synthetic and not for real maintenance."
+            },
+            "faithfulnessEvaluable": true,
+            "allKeypointsCovered": true
+          },
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-006",
+          "route": "rag",
+          "language": "zh",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 2,
+          "callExpectation": "2..2",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "Covers propeller and spinner condition.",
+                "covered": true
+              },
+              {
+                "keypoint": "Covers windshield cleanliness and crack limits.",
+                "covered": true
+              },
+              {
+                "keypoint": "Covers wing leading edges, control surface movement, antennas and static ports.",
+                "covered": false
+              }
+            ],
+            "faithfulness": {
+              "supported": true,
+              "notes": "All factual claims in the answer are supported by the cited excerpts, though the third required key point is incomplete because antennas and static ports are not mentioned."
+            },
+            "faithfulnessEvaluable": true,
+            "allKeypointsCovered": false
+          },
+          "pass": false,
+          "failures": [
+            "judge: key points not covered: Covers wing leading edges, control surface movement, antennas and static ports."
+          ]
+        },
+        {
+          "id": "AVI-007",
+          "route": "rag",
+          "language": "zh",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 2,
+          "callExpectation": "2..2",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "States the minimum tread depth and that visible fabric requires replacement.",
+                "covered": false
+              },
+              {
+                "keypoint": "States the cut length and depth limits beyond which the tire is replaced.",
+                "covered": false
+              },
+              {
+                "keypoint": "Notes that sidewall cracks in the bead-to-shoulder zone and any flat spot are not permitted.",
+                "covered": false
+              }
+            ],
+            "faithfulness": {
+              "supported": true,
+              "notes": "All factual claims are supported by the cited excerpts, which explicitly label the sample maintenance data as fictional and not for real aircraft use."
+            },
+            "faithfulnessEvaluable": true,
+            "allKeypointsCovered": false
+          },
+          "pass": false,
+          "failures": [
+            "judge: key points not covered: States the minimum tread depth and that visible fabric requires replacement. | States the cut length and depth limits beyond which the tire is replaced. | Notes that sidewall cracks in the bead-to-shoulder zone and any flat spot are not permitted."
+          ]
+        },
+        {
+          "id": "AVI-008",
+          "route": "rag",
+          "language": "zh",
+          "expectedOutcome": "ANSWERED",
+          "actualOutcome": "ANSWERED",
+          "calls": 2,
+          "callExpectation": "2..2",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": true,
+          "reciprocalRank": 1,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": {
+            "keypointCoverage": [
+              {
+                "keypoint": "Records the date and the inspector identifier in the logbook.",
+                "covered": true
+              },
+              {
+                "keypoint": "Records any discrepancies found, using the invented discrepancy codes in the D-100 range.",
+                "covered": true
+              }
+            ],
+            "faithfulness": {
+              "supported": true,
+              "notes": "All factual claims about the synthetic SKY-100 daily inspection records are supported by the cited excerpts, and the additional caveats are non-factual safety guidance."
+            },
+            "faithfulnessEvaluable": true,
+            "allKeypointsCovered": true
+          },
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-009",
+          "route": "validation_block",
+          "language": "en",
+          "expectedOutcome": "VALIDATION_BLOCKED",
+          "actualOutcome": "VALIDATION_BLOCKED",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-010",
+          "route": "validation_block",
+          "language": "zh",
+          "expectedOutcome": "VALIDATION_BLOCKED",
+          "actualOutcome": "VALIDATION_BLOCKED",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-011",
+          "route": "validation_unknown",
+          "language": "en",
+          "expectedOutcome": "VALIDATION_UNKNOWN",
+          "actualOutcome": "VALIDATION_UNKNOWN",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-012",
+          "route": "clarify_model",
+          "language": "en",
+          "expectedOutcome": "CLARIFICATION_REQUIRED",
+          "actualOutcome": "CLARIFICATION_REQUIRED",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-013",
+          "route": "clarify_model",
+          "language": "zh",
+          "expectedOutcome": "CLARIFICATION_REQUIRED",
+          "actualOutcome": "CLARIFICATION_REQUIRED",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": null,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-014",
+          "route": "no_answer",
+          "language": "en",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "NO_ANSWER",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": false,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-015",
+          "route": "no_answer",
+          "language": "en",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "NO_ANSWER",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": false,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-016",
+          "route": "no_answer",
+          "language": "zh",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "ANSWERED",
+          "calls": 2,
+          "callExpectation": "0..1",
+          "routeOk": false,
+          "zeroCallViolation": true,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": true,
+          "judge": null,
+          "pass": false,
+          "failures": [
+            "route: expected NO_ANSWER, got ANSWERED",
+            "calls: expected 0..1, got 2",
+            "citations: must be empty on this route",
+            "reply: expected fixed notice \"未在手册中找到相关内容。\""
+          ]
+        },
+        {
+          "id": "AVI-017",
+          "route": "no_answer",
+          "language": "zh",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "NO_ANSWER",
+          "calls": 1,
+          "callExpectation": "0..1",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": false,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-018",
+          "route": "out_of_scope",
+          "language": "en",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "NO_ANSWER",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": false,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-019",
+          "route": "out_of_scope",
+          "language": "en",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "NO_ANSWER",
+          "calls": 0,
+          "callExpectation": "0..0",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": false,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        },
+        {
+          "id": "AVI-020",
+          "route": "out_of_scope",
+          "language": "zh",
+          "expectedOutcome": "NO_ANSWER",
+          "actualOutcome": "NO_ANSWER",
+          "calls": 1,
+          "callExpectation": "0..1",
+          "routeOk": true,
+          "zeroCallViolation": false,
+          "hitAt5": null,
+          "reciprocalRank": null,
+          "citationIntegrityOk": true,
+          "noAnswerFabricated": false,
+          "judge": null,
+          "pass": true,
+          "failures": []
+        }
+      ]
+    }
+  ],
+  "skipped": [],
+  "allGatesPass": false
+}
