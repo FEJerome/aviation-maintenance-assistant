@@ -91,3 +91,88 @@ mapping, not a native product route.
 
 Results from this runner must never be presented as covering real models, real
 providers, public networks, HTTPS, or production deployments.
+
+## Real-model release acceptance
+
+`run-real-smoke.mjs` is the release-acceptance counterpart of the golden-set
+runner: it replays the same `evals/aviation/golden-set.json` through the same
+HTTP endpoint (and optionally the MCP endpoint) against a backend wired to a
+**real OpenAI-compatible provider**. It reuses the same assertions and gates,
+with three differences:
+
+- **Call counting** — there is no fake counter, so model calls are read from
+  the backend's own quota ledger: `daily-llm-quota.json` inside the backend's
+  `AMA_STATE_PATH`. Point `EVAL_STATE_PATH` at that directory (required).
+- **Hard cap** — the run aborts once it consumes `EVAL_MAX_MODEL_CALLS`
+  (default **80**) model calls in total (backend quota delta plus judge calls).
+  Items run strictly sequentially, with no retries and no parallelism; any
+  non-2xx HTTP response (including 429) stops the run immediately.
+- **Optional LLM judge** — `EVAL_JUDGE=1` adds one judge call per `rag` item
+  per channel: keypoint coverage against `answer_keypoints` (gated at 100%,
+  fail-closed when a verdict is unusable) plus a faithfulness check against the
+  cited excerpt text (reported only, no gate). Faithfulness is evaluable only
+  on the MCP channel, which returns excerpt text; HTTP-channel answers are
+  judged on coverage alone. The judge uses the same `AMA_LLM_BASE_URL` /
+  `AMA_LLM_API_KEY` / `AMA_LLM_MODEL` triple the backend uses (override the
+  model with `EVAL_JUDGE_MODEL`).
+
+### Credential red lines (binding)
+
+- Real credentials exist **only** as server-side environment variables
+  (`AMA_LLM_API_KEY` on the backend process, the same variable for the judge).
+  They must never appear in the repository, in reports, in screenshots, in
+  logs, or in commit messages.
+- Never commit a real `.env`; the smoke backend env is injected at launch time.
+- The smoke uses a **dedicated** Chroma collection (e.g. `ama-eval-real`) and
+  dedicated `AMA_DATA_PATH` / `AMA_STATE_PATH` directories — never the
+  development `aviation-docs` collection or state.
+
+### Running
+
+1. Start the backend against the real provider with a dedicated collection and
+   state directory, e.g. (values are variable names, never literals):
+
+   ```bash
+   AMA_RUNTIME_MODE=cloud-allowed \
+   AMA_LLM_BASE_URL=<provider-base-url> \
+   AMA_LLM_API_KEY=<provider-key-from-secure-store> \
+   AMA_LLM_MODEL=<provider-model> \
+   AMA_CHROMA_BASE_URL=http://127.0.0.1:18090 \
+   AMA_CHROMA_COLLECTION=ama-eval-real \
+   AMA_DATA_PATH=<smoke-temp>/data \
+   AMA_STATE_PATH=<smoke-temp>/state \
+   AMA_LLM_DAILY_QUOTA=120 \
+   AMA_RATE_LIMIT_PER_IP_PER_HOUR=200 \
+   AMA_MCP_ENABLED=true \
+   AMA_MCP_AUTH_TOKEN=<long-random-token> \
+   SERVER_PORT=18091 ./mvnw spring-boot:run
+   ```
+
+2. Copy `examples/quickstart/*.md` into `<smoke-temp>/data` and ingest once
+   (`POST /api/admin/ingest`) so the three synthetic documents report
+   `UPSERTED` into the dedicated collection.
+3. Run the smoke:
+
+   ```bash
+   EVAL_STATE_PATH=<smoke-temp>/state node scripts/eval/run-real-smoke.mjs
+
+   # With the MCP second pass and the LLM judge:
+   EVAL_STATE_PATH=<smoke-temp>/state EVAL_MCP_PASS=1 MCP_TOKEN=<same-token> \
+   EVAL_JUDGE=1 AMA_LLM_BASE_URL=<provider-base-url> \
+   AMA_LLM_API_KEY=<provider-key-from-secure-store> AMA_LLM_MODEL=<provider-model> \
+     node scripts/eval/run-real-smoke.mjs
+   ```
+
+4. Afterwards, re-run the loopback suite (`run-golden-set.mjs` plus the
+   `scripts/tests/` battery) to confirm nothing regressed.
+
+### How results may be described (binding)
+
+- A smoke report covers **exactly one provider, one model, and the synthetic
+  corpus, at one point in time**. It must be phrased that way.
+- It must **never** be presented as: coverage of other providers or models,
+  quality certification, production-readiness proof, or evidence over real
+  manuals. The loopback suite remains the regression gate; the smoke is a
+  point-in-time acceptance check.
+- Reports land in `docs/test-reports/` as `<stem>.json` / `<stem>.md` and must
+  be scanned for credential material before committing.
