@@ -16,7 +16,7 @@
 
 All three connection variables must be present together in cloud mode. If any one is present, generic mode is selected and missing values fail validation; DeepSeek values never fill the gaps. Empty YAML or Compose placeholders therefore must not be used. `LANGCHAIN4J_OPEN_AI_CHAT_MODEL_API_KEY` is not a supported key source.
 
-For migration, `DEEPSEEK_API_KEY` alone selects `https://api.deepseek.com/v1`, `deepseek-chat`, and temperature `0.2` in cloud mode. It is rejected as a fallback in local-only mode.
+For migration, `DEEPSEEK_API_KEY` alone selects `https://api.deepseek.com/v1`, `deepseek-flash`, and temperature `0.2` in cloud mode. It is rejected as a fallback in local-only mode.
 
 ## Local-only protection
 
@@ -69,4 +69,4 @@ The MCP authorization filter accepts only loopback remote addresses and permanen
 forwarded headers, independent of `AMA_TRUST_PROXY_HEADERS`. Deploying behind a proxy or
 container network makes the remote address non-loopback; use local port forwarding instead.
 
-Golden-set execution and downloadable persistent traces remain planned capabilities.
+Downloadable persistent traces remain a planned capability.

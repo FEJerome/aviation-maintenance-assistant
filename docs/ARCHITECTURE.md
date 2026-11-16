@@ -75,4 +75,4 @@ the endpoint is enabled without a sufficiently long token. The endpoint is disab
 default; when disabled the transport autoconfiguration backs off entirely and the path
 returns the standard 404. Contract: [MCP.md](MCP.md).
 
-The golden-set executor and full persistent tracing remain future capabilities.
+Full persistent tracing remains a future capability.

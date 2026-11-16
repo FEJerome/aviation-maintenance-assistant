@@ -36,7 +36,6 @@
 
 **规划中的能力（目标契约，当前尚不可用）：**
 
-- **Golden-set 评测工具**——可复现的检索与回答质量回归评测。Schema 见 [evals/aviation/golden-set.schema.json](evals/aviation/golden-set.schema.json)。状态：**planned**；评测集本体尚未撰写。
 - **完整持久化 trace**——当前仅提供请求级 traceId 与安全日志，完整可下载 trace 仍为规划能力。
 
 ---
