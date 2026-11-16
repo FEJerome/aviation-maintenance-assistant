@@ -79,8 +79,9 @@ Three layers per item (see `evals/aviation/README.md` for the set contract):
   present).
 - **L3 answer structure** — ANSWERED items need a non-empty reply containing an `[S`
   citation marker and `degraded=false`; NO_ANSWER items must return the fixed
-  not-found notice exactly. Semantic/LLM-judged scoring is deferred to the release
-  acceptance milestone.
+  not-found notice exactly. Semantic/LLM-judged scoring over the answer key
+  points is implemented in the release-acceptance runner (see *Real-model
+  release acceptance* below).
 
 Gates (any failure → non-zero exit): route accuracy = 100%, zero-call violations = 0,
 no_answer false-answer rate = 0, rag doc-level hit@5 = 100%, citations integrity =

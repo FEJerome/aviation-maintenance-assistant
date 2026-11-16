@@ -261,7 +261,7 @@ curl -X POST http://localhost:8080/api/admin/ingest
 
 - **评测集**：20 条，基于三篇合成 quickstart 手册，覆盖全部六种控制流路由（`rag`／`validation_block`／`validation_unknown`／`clarify_model`／`no_answer`／`out_of_scope`），中英文问题兼有——见 [evals/aviation/](evals/aviation/)。
 - **检查层**：L1 控制流路由＋零模型调用断言，L2 doc 级检索 hit@5／MRR／citations 完整性，L3 回答结构（引用标记、固定拒答文案）。
-- **门槛**：路由正确率 100%、零调用违规 0、no_answer 误答率 0、rag hit@5 100%、citations 完整性 100%（MRR 只报告不设门槛）。语义／LLM 评审评分留待发布验收。
+- **门槛**：路由正确率 100%、零调用违规 0、no_answer 误答率 0、rag hit@5 100%、citations 完整性 100%（MRR 只报告不设门槛）。基于答案要点的语义／LLM 评审评分已在真实模型发布验收 smoke（[scripts/eval/run-real-smoke.mjs](scripts/eval/run-real-smoke.mjs)）中实现，已执行的验收报告提交在 `docs/test-reports/`。
 - **执行器**：[scripts/eval/run-golden-set.mjs](scripts/eval/run-golden-set.mjs)——零依赖，可选第二遍走只读 MCP 端点；报告写入 `docs/test-reports/`。
 
 ---

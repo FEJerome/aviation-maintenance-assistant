@@ -261,7 +261,7 @@ A deterministic golden-set harness regression-checks the reference implementatio
 
 - **Set**: 20 items over the three synthetic quickstart manuals, covering all six control-flow routes (`rag` / `validation_block` / `validation_unknown` / `clarify_model` / `no_answer` / `out_of_scope`) with English and Chinese questions — see [evals/aviation/](evals/aviation/).
 - **Checks**: L1 control-flow routing with zero-model-call assertions, L2 doc-level retrieval hit@5 / MRR / citation integrity, L3 answer structure (citation markers, fixed abstention notices).
-- **Gates**: route accuracy 100%, zero-call violations 0, no_answer false-answer rate 0, rag hit@5 100%, citations integrity 100% (MRR reported without a gate). Semantic/LLM-judged scoring is deferred to release acceptance.
+- **Gates**: route accuracy 100%, zero-call violations 0, no_answer false-answer rate 0, rag hit@5 100%, citations integrity 100% (MRR reported without a gate). Semantic/LLM-judged scoring over the answer key points is implemented in the real-model release-acceptance smoke ([scripts/eval/run-real-smoke.mjs](scripts/eval/run-real-smoke.mjs)); the executed smoke report is committed under `docs/test-reports/`.
 - **Runner**: [scripts/eval/run-golden-set.mjs](scripts/eval/run-golden-set.mjs) — zero-dependency, optional second pass over the read-only MCP endpoint; reports land in `docs/test-reports/`.
 
 ---

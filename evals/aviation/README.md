@@ -71,7 +71,7 @@ The runner evaluates three layers deterministically on loopback (fake LLM + isol
 - **L2 retrieval quality**: rag items must cite a `required_docs` document in their top-5 citations (doc-level hit@5; reciprocal rank feeds MRR); no_answer and out_of_scope items must return empty citations; citation field integrity is checked on every citation.
 - **L3 answer structure**: ANSWERED items need a non-empty reply with an `[S` citation marker and `degraded=false`; NO_ANSWER items must return the fixed not-found notice exactly.
 
-**Gates** (any failure exits non-zero): route accuracy 100%, zero-call violations 0, no_answer false-answer rate 0, rag doc-level hit@5 100%, citations integrity 100%. MRR is reported without a gate. Semantic scoring / LLM-as-judge over `answer_keypoints` is deliberately deferred to the release-acceptance milestone.
+**Gates** (any failure exits non-zero): route accuracy 100%, zero-call violations 0, no_answer false-answer rate 0, rag doc-level hit@5 100%, citations integrity 100%. MRR is reported without a gate. Semantic scoring / LLM-as-judge over `answer_keypoints` is implemented in the release-acceptance runner `scripts/eval/run-real-smoke.mjs` (keypoint coverage gated at 100% fail-closed; faithfulness reported only) — see `scripts/eval/README.md`.
 
 **out_of_scope mapping**: the toolkit has no native out-of-scope route; `out_of_scope` items are evaluated against the honest-abstention `NO_ANSWER` outcome. This is a documented mapping, not a native product route.
 
@@ -146,7 +146,7 @@ Golden set 为航空参考实现提供**可复现的回归检查**：
 - **L2 检索质量**：rag 条目的前 5 条 citations 必须命中 `required_docs` 文档（doc 级 hit@5；倒数排名计入 MRR）；no_answer 与 out_of_scope 条目的 citations 必须为空；逐条检查 citation 字段完整性。
 - **L3 回答结构**：ANSWERED 条目要求回复非空、含 `[S` 引用标记且 `degraded=false`；NO_ANSWER 条目必须精确返回固定的"未找到"文案。
 
-**门槛**（任一不过即非零退出）：路由正确率 100%、零调用违规 0、no_answer 误答率 0、rag doc 级 hit@5 100%、citations 完整性 100%。MRR 只报告不设门槛。基于 `answer_keypoints` 的语义评分／LLM 评审明确留待发布验收里程碑。
+**门槛**（任一不过即非零退出）：路由正确率 100%、零调用违规 0、no_answer 误答率 0、rag doc 级 hit@5 100%、citations 完整性 100%。MRR 只报告不设门槛。基于 `answer_keypoints` 的语义评分／LLM 评审已在发布验收执行器 `scripts/eval/run-real-smoke.mjs` 中实现（要点覆盖 100% fail-closed 设门槛、faithfulness 只报告）——见 `scripts/eval/README.md`。
 
 **out_of_scope 映射说明**：产品没有原生 out_of_scope 路由；此类条目按诚实拒答的 `NO_ANSWER` outcome 评测。这是如实注明的映射，而非原生产品路由。
 
