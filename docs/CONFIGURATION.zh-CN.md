@@ -37,9 +37,12 @@
 | `AMA_STATE_PATH` | `./state` | 可写配额状态目录。 |
 | `AMA_RAG_MAX_RESULTS` | `5` | 检索结果上限。 |
 | `AMA_RAG_MIN_SCORE` | `0.6` | 检索分数门槛。 |
+| `AMA_RAG_ANSWER_MIN_SCORE` | `0.65` | 允许作答所需的最佳 excerpt 最低分；低于该上限的检索结果走既有拒答路径，不调用模型。 |
 | `AMA_AVIATION_QUERY_TRANSLATION_ENABLED` | `true` | 中文翻译复用 executor，并遵守同一 local-only 端点约束。 |
 
 `document_id` 来自原始字节 SHA-256；`excerpt_id` 来自 `document_id`、`recursive-500-50-v1`、chunk 序号和精确文本。重复摄入清理并重写同版本；改字节生成新版本且不删除旧版本。缺少这些 metadata 的旧向量必须摄入到新 collection。
+
+`AMA_RAG_ANSWER_MIN_SCORE` 与本地 MiniLM embedding 模型和当前语料绑定，不是普遍常数。默认值仅按内置合成语料校准；接入真实手册语料前必须重新校准。
 
 配额文件为 `AMA_STATE_PATH/daily-llm-quota.json`，按 UTC 日期和单进程原子预留计数。旧 `data/daily-llm-quota.json` 不自动继承；应停止写入后核对 `date/count` 并人工迁移，或采用保守的新日限额。
 

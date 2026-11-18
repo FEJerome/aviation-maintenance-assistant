@@ -59,7 +59,7 @@ public class GroundedChatService {
 
     public GroundedResult respond(GroundedRequest request) {
         List<RetrievedExcerpt> excerpts = retrievalService.retrieve(request.userMessage(), request.traceId());
-        if (excerpts.isEmpty()) {
+        if (!sufficientEvidence(excerpts)) {
             return noAnswer();
         }
         return respondWithSources(request, excerpts, false);
@@ -67,7 +67,7 @@ public class GroundedChatService {
 
     public void respondStream(GroundedRequest request, StreamObserver observer) {
         List<RetrievedExcerpt> excerpts = retrievalService.retrieve(request.userMessage(), request.traceId());
-        if (excerpts.isEmpty()) {
+        if (!sufficientEvidence(excerpts)) {
             GroundedResult result = noAnswer();
             observer.onToken(result.reply());
             observer.onComplete(result);
@@ -144,6 +144,17 @@ public class GroundedChatService {
 
     private List<Citation> citations(List<RetrievedExcerpt> excerpts) {
         return excerpts.stream().map(RetrievedExcerpt::toCitation).toList();
+    }
+
+    private boolean sufficientEvidence(List<RetrievedExcerpt> excerpts) {
+        if (excerpts.isEmpty()) {
+            return false;
+        }
+        double bestScore = excerpts.stream()
+                .mapToDouble(RetrievedExcerpt::score)
+                .max()
+                .orElse(0.0);
+        return bestScore >= properties.getRag().getAnswerMinScore();
     }
 
     private GroundedResult noAnswer() {

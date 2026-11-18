@@ -37,9 +37,12 @@ Local MiniLM embeddings keep vectorization local, but that alone does not make t
 | `AMA_STATE_PATH` | `./state` | Writable quota state directory. |
 | `AMA_RAG_MAX_RESULTS` | `5` | Maximum retrieval results. |
 | `AMA_RAG_MIN_SCORE` | `0.6` | Retrieval score threshold. |
+| `AMA_RAG_ANSWER_MIN_SCORE` | `0.65` | Minimum best excerpt score required to generate an answer. Retrieval results below this ceiling follow the existing no-answer route without calling the model. |
 | `AMA_AVIATION_QUERY_TRANSLATION_ENABLED` | `true` | Chinese query translation through the same executor and local-only endpoint rules. |
 
 Document IDs hash the raw source bytes. Excerpt IDs hash `document_id`, `recursive-500-50-v1`, chunk index, and exact chunk text. Re-ingestion removes and rewrites the same `document_id`; changed bytes create a new version and do not delete the old one. Existing stores without this metadata must be re-ingested into a new collection.
+
+`AMA_RAG_ANSWER_MIN_SCORE` is bound to the local MiniLM embedding model and the current corpus; it is not a universal constant. The default was calibrated on the bundled synthetic corpus only, and a real manual corpus must be re-calibrated before this value is trusted there.
 
 The quota file is `AMA_STATE_PATH/daily-llm-quota.json`. It uses UTC dates and single-process atomic reservations. The legacy `data/daily-llm-quota.json` is not inherited automatically; stop writes, verify its `date` and `count`, and migrate it deliberately or choose a conservative new daily limit.
 
