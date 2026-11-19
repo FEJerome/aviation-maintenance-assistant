@@ -150,6 +150,7 @@ public class AmaProperties {
 
         private int maxResults = 5;
         private double minScore = 0.6;
+        private double answerMinScore = 0.65;
         private boolean queryTranslationEnabled = true;
 
         public int getMaxResults() {
@@ -166,6 +167,14 @@ public class AmaProperties {
 
         public void setMinScore(double minScore) {
             this.minScore = minScore;
+        }
+
+        public double getAnswerMinScore() {
+            return answerMinScore;
+        }
+
+        public void setAnswerMinScore(double answerMinScore) {
+            this.answerMinScore = answerMinScore;
         }
 
         public boolean isQueryTranslationEnabled() {

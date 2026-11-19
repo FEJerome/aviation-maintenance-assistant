@@ -55,6 +55,22 @@ class GroundedChatServiceTest {
     }
 
     @Test
+    void emptyRetrievalStreamAbstainsWithoutGeneration() {
+        when(retrievalService.retrieve("question", "trace-grounded")).thenReturn(List.of());
+        GroundedChatService.StreamObserver observer = mock(GroundedChatService.StreamObserver.class);
+
+        service.respondStream(request, observer);
+
+        ArgumentCaptor<GroundedChatService.GroundedResult> result =
+                ArgumentCaptor.forClass(GroundedChatService.GroundedResult.class);
+        verify(observer).onToken(NO_ANSWER_REPLY);
+        verify(observer).onComplete(result.capture());
+        assertThat(result.getValue().outcome()).isEqualTo(ChatResponse.Outcome.NO_ANSWER);
+        assertThat(result.getValue().citations()).isEmpty();
+        verifyNoInteractions(executor);
+    }
+
+    @Test
     void blockingResponseIncludesSourcesAndStableCitations() {
         RetrievedExcerpt excerpt = excerpt();
         when(retrievalService.retrieve("question", "trace-grounded")).thenReturn(List.of(excerpt));
@@ -139,6 +155,133 @@ class GroundedChatServiceTest {
         GroundedChatService.GroundedResult result = service.respond(request);
 
         assertThat(result.excerpts()).isEmpty();
+    }
+
+    @Test
+    void blockingLowScoreEvidenceAbstainsWithoutGeneration() {
+        RetrievedExcerpt weak = excerptWithScore(0.5);
+        when(retrievalService.retrieve("question", "trace-grounded")).thenReturn(List.of(weak));
+
+        GroundedChatService.GroundedResult result = service.respond(request);
+
+        assertThat(result.outcome()).isEqualTo(ChatResponse.Outcome.NO_ANSWER);
+        assertThat(result.generationMode()).isEqualTo(ChatResponse.GenerationMode.NONE);
+        assertThat(result.citations()).isEmpty();
+        assertThat(result.excerpts()).isEmpty();
+        assertThat(result.reply()).isEqualTo(NO_ANSWER_REPLY);
+        verifyNoInteractions(executor);
+    }
+
+    @Test
+    void blockingScoreAtThresholdGenerates() {
+        RetrievedExcerpt borderline = excerptWithScore(properties.getRag().getAnswerMinScore());
+        when(retrievalService.retrieve("question", "trace-grounded")).thenReturn(List.of(borderline));
+        when(executor.executeBlocking(any(ChatRequest.class), eq("trace-grounded")))
+                .thenReturn(response("Grounded answer"));
+
+        GroundedChatService.GroundedResult result = service.respond(request);
+
+        assertThat(result.outcome()).isEqualTo(ChatResponse.Outcome.ANSWERED);
+        assertThat(result.citations()).containsExactly(borderline.toCitation());
+        verify(executor).executeBlocking(any(ChatRequest.class), eq("trace-grounded"));
+    }
+
+    @Test
+    void blockingScoreAboveThresholdGenerates() {
+        RetrievedExcerpt strong = excerptWithScore(0.9);
+        when(retrievalService.retrieve("question", "trace-grounded")).thenReturn(List.of(strong));
+        when(executor.executeBlocking(any(ChatRequest.class), eq("trace-grounded")))
+                .thenReturn(response("Grounded answer"));
+
+        GroundedChatService.GroundedResult result = service.respond(request);
+
+        assertThat(result.outcome()).isEqualTo(ChatResponse.Outcome.ANSWERED);
+        verify(executor).executeBlocking(any(ChatRequest.class), eq("trace-grounded"));
+    }
+
+    @Test
+    void blockingUsesHighestScoreAcrossExcerpts() {
+        RetrievedExcerpt weak = excerptWithScore(0.5);
+        RetrievedExcerpt borderline = excerptWithScore(properties.getRag().getAnswerMinScore());
+        when(retrievalService.retrieve("question", "trace-grounded")).thenReturn(List.of(weak, borderline));
+        when(executor.executeBlocking(any(ChatRequest.class), eq("trace-grounded")))
+                .thenReturn(response("Grounded answer"));
+
+        GroundedChatService.GroundedResult result = service.respond(request);
+
+        assertThat(result.outcome()).isEqualTo(ChatResponse.Outcome.ANSWERED);
+    }
+
+    @Test
+    void streamLowScoreEvidenceAbstainsWithoutGeneration() {
+        properties.getLlm().setStreamingEnabled(true);
+        RetrievedExcerpt weak = excerptWithScore(0.5);
+        when(retrievalService.retrieve("question", "trace-grounded")).thenReturn(List.of(weak));
+        GroundedChatService.StreamObserver observer = mock(GroundedChatService.StreamObserver.class);
+
+        service.respondStream(request, observer);
+
+        ArgumentCaptor<GroundedChatService.GroundedResult> result =
+                ArgumentCaptor.forClass(GroundedChatService.GroundedResult.class);
+        verify(observer).onToken(NO_ANSWER_REPLY);
+        verify(observer).onComplete(result.capture());
+        assertThat(result.getValue().outcome()).isEqualTo(ChatResponse.Outcome.NO_ANSWER);
+        assertThat(result.getValue().generationMode()).isEqualTo(ChatResponse.GenerationMode.NONE);
+        assertThat(result.getValue().citations()).isEmpty();
+        assertThat(result.getValue().excerpts()).isEmpty();
+        verifyNoInteractions(executor);
+    }
+
+    @Test
+    void streamScoreAtThresholdGenerates() {
+        properties.getLlm().setStreamingEnabled(true);
+        RetrievedExcerpt borderline = excerptWithScore(properties.getRag().getAnswerMinScore());
+        when(retrievalService.retrieve("question", "trace-grounded")).thenReturn(List.of(borderline));
+        doAnswer(invocation -> {
+            StreamingChatResponseHandler handler = invocation.getArgument(2);
+            handler.onPartialResponse("streamed");
+            handler.onCompleteResponse(response("streamed answer"));
+            return null;
+        }).when(executor).executeStreaming(any(), eq("trace-grounded"), any());
+        GroundedChatService.StreamObserver observer = mock(GroundedChatService.StreamObserver.class);
+
+        service.respondStream(request, observer);
+
+        ArgumentCaptor<GroundedChatService.GroundedResult> result =
+                ArgumentCaptor.forClass(GroundedChatService.GroundedResult.class);
+        verify(observer).onToken("streamed");
+        verify(observer).onComplete(result.capture());
+        assertThat(result.getValue().outcome()).isEqualTo(ChatResponse.Outcome.ANSWERED);
+        assertThat(result.getValue().generationMode()).isEqualTo(ChatResponse.GenerationMode.STREAMING);
+        verify(executor).executeStreaming(any(), eq("trace-grounded"), any());
+        verify(executor, never()).executeBlocking(any(), any());
+    }
+
+    @Test
+    void streamScoreAboveThresholdGenerates() {
+        properties.getLlm().setStreamingEnabled(true);
+        RetrievedExcerpt strong = excerptWithScore(0.9);
+        when(retrievalService.retrieve("question", "trace-grounded")).thenReturn(List.of(strong));
+        doAnswer(invocation -> {
+            StreamingChatResponseHandler handler = invocation.getArgument(2);
+            handler.onPartialResponse("streamed");
+            handler.onCompleteResponse(response("streamed answer"));
+            return null;
+        }).when(executor).executeStreaming(any(), eq("trace-grounded"), any());
+        GroundedChatService.StreamObserver observer = mock(GroundedChatService.StreamObserver.class);
+
+        service.respondStream(request, observer);
+
+        verify(observer).onComplete(any());
+        verify(executor).executeStreaming(any(), eq("trace-grounded"), any());
+        verify(executor, never()).executeBlocking(any(), any());
+    }
+
+    private static final String NO_ANSWER_REPLY = "未在手册中找到相关内容。";
+
+    private RetrievedExcerpt excerptWithScore(double score) {
+        return new RetrievedExcerpt(
+                "Synthetic source text", "exr_test", "doc_test", "synthetic.md", 0, score);
     }
 
     private RetrievedExcerpt excerpt() {
